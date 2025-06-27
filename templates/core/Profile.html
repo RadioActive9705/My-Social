@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Profil – {{ profile.user.username }}{% endblock %}
+
+{% block content %}
+  <h1>Profil użytkownika: {{ profile.user.username }}</h1>
+
+  <div>
+    <strong>Email:</strong> {{ profile.user.email }}<br>
+    <strong>Bio:</strong> {{ profile.bio|default:"(brak bio)" }}<br>
+    {% if profile.avatar %}
+      <img src="{{ profile.avatar.url }}" alt="Avatar" style="max-width:200px;">
+    {% endif %}
+  </div>
+
+  {% if request.user == profile.user %}
+    <h2>Edytuj profil</h2>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Zapisz zmiany</button>
+    </form>
+  {% else %}
+    <p>
+      <a href="{% url 'send_friend_request' profile.user.username %}">
+        Wyślij zaproszenie do znajomych
+      </a>
+    </p>
+  {% endif %}
+
+  <p><a href="{% url 'post_list' %}">← Wróć do listy postów</a></p>
+{% endblock %}
