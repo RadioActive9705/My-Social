@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Mój Super Serwis{% endblock title %}</title>
+    <!-- Tutaj możesz dodać linki do CSS, np. z Bootstrapa -->
+</head>
+<body>
+    <header>
+        <!-- Tutaj możesz umieścić nawigację, logo itp. -->
+        <h1>Sieć Społecznościowa</h1>
+        <nav>
+            <a href="/">Strona główna</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'profile' username=user.username %}">Mój Profil</a>
+                <a href="{% url 'logout' %}">Wyloguj</a>
+            {% else %}
+                <a href="{% url 'login' %}">Zaloguj</a>
+                <a href="{% url 'register' %}">Zarejestruj</a>
+            {% endif %}
+        </nav>
+        <hr>
+    </header>
+
+    <main>
+        {% block content %}
+        <!-- Treść z innych szablonów (np. Profile.html) pojawi się tutaj -->
+        {% endblock content %}
+    </main>
+
+    <footer>
+        <hr>
+        <p>© 2024 Twoja Firma</p>
+    </footer>
+</body>
+</html>

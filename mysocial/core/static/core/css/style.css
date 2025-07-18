@@ -1,0 +1,33 @@
+body {
+    background-color: blue;
+}
+
+.container {
+    max-width: 400px;
+    padding: 32px;
+    margin: 0 auto;
+}
+
+h1 {
+    margin-bottom: 16px;
+    font-size: 24px;
+}
+
+p {
+    margin-bottom: 24px;
+    color: #666666;
+}
+
+button {
+    background: #007bff;
+    color: white;
+    padding: 4px 5px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.secondary {
+    background: #f8f9fa;
+    color: #212529;
+    border-color: #ced4da;
+}

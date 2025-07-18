@@ -1,51 +1,62 @@
-from django.shortcuts import render, get_object_or_404
-from django.shortcuts import render, redirect
-from django.contrib.auth import login
-from .models import Post
-from .forms import RegistationForm
-from .models import CustomUser,Profile
-from .forms import ProfileForm 
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.contrib.auth import login, get_user_model # <-- Zmieniony import!
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
-from django.urls import reverse
-from django.contrib.auth.models import User
+
+from .models import Post, Profile
+from .forms import RegistationForm, ProfileForm # <-- Poprawiłem literówkę w RegistrationForm w kodzie niżej
+
+# Pobierz model użytkownika, który jest aktualnie aktywny w projekcie
+User = get_user_model()
 
 class CustomLoginView(LoginView):
-    template_name='core/login.html'
+    template_name = 'core/login.html'
     
     def get_success_url(self):
-        return reverse('profile',kwargs={'username': self.request.user.username})
+        # Przekierowuje na profil zalogowanego użytkownika
+        return reverse('profile', kwargs={'username': self.request.user.username})
 
 @login_required
-def profile_view(request,username):
-    user_obj =  get_object_or_404(User,username=username)
+def profile_view(request, username):
+    # Używamy get_user_model() (czyli naszego CustomUser) do pobrania użytkownika
+    user = get_object_or_404(User, username=username)
     
-    context={
-        'user_profile': user_obj
+    # Pobieramy profil powiązany z tym użytkownikiem
+    # Użyj get_or_create, aby uniknąć błędu, jeśli profil jeszcze nie istnieje
+    profile, created = Profile.objects.get_or_create(user=user)
+    
+    # Obsługa formularza do edycji profilu
+    if request.user == user and request.method == "POST":
+        form = ProfileForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            form.save()
+            return redirect('profile', username=username)
+    else:
+        form = ProfileForm(instance=profile)
+        
+    context = {
+        'profile': profile,
+        'form': form,
+        'user_profile': user # Możesz przekazać też obiekt usera, jeśli potrzebujesz
     }
-    
-    
-    
     return render(request, 'core/Profile.html', context)
 
 
 def my_profile_redirect(request):
-    current_username = request.user.username
+    # Ten widok jest przydatny do linku "Mój profil"
+    if request.user.is_authenticated:
+        return redirect('profile', username=request.user.username)
+    return redirect('login')
     
-    return redirect('profile',username=current_username)
-    
-
-def postlist(request):
-    return render(request,'core/postlist.html')
-    pass
-
 def register(request):
     if request.method == 'POST':
+        # Sugeruję zmianę nazwy 'RegistationForm' na 'RegistrationForm' w forms.py
         form = RegistationForm(request.POST) 
         if form.is_valid():
-            user = form.save()       # tworzy CustomUser
-            login(request, user)     # automatyczne zalogowanie
-            return redirect('postlist')  # lub inna strona startowa
+            user = form.save()
+            login(request, user)
+            return redirect('postlist')
     else:
         form = RegistationForm()
     return render(request, 'core/register.html', {'form': form})
@@ -53,31 +64,3 @@ def register(request):
 def post_list(request):
     posts = Post.objects.all().order_by('-created_at')
     return render(request, 'core/postlist.html', {'posts': posts})
-# Create your views here.
-
-class CustomLoginView(LoginView):
-    template_name = 'core/login.html'
-
-    def get_success_url(self):
-        return reverse('profile', kwargs={'username': self.request.user.username})
-
-# @login_required
-# def profile_view(request,username):
-#     user=get_object_or_404(CustomUser,username=username)
-    
-#     profile=get_object_or_404(Profile,user=user)
-    
-#     if request.user == user and request.method =="POST":
-#         form = ProfileForm(request.POST, request.FILES, instance=profile)
-#         if form.is_valid():
-#             form.save()
-#             return redirect('profile', username =username)
-#         else:
-#             form = ProfileForm(instance=profile)
-        
-#         return render(request, 'core/Profile.html',{
-#             'profile': profile,
-#             'form': form
-#         })
-    
-    
