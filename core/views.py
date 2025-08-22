@@ -3,12 +3,17 @@ from django.urls import reverse
 from django.contrib.auth import login, get_user_model # <-- Zmieniony import!
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
+from django.contrib.auth import logout
 
 from .models import Post, Profile
 from .forms import RegistationForm, ProfileForm # <-- Poprawiłem literówkę w RegistrationForm w kodzie niżej
 
 # Pobierz model użytkownika, który jest aktualnie aktywny w projekcie
 User = get_user_model()
+
+def logout_view(request):
+    logout(request)
+    return render(request,'logout.html')  # Przekierowanie do strony logowania po wylogowaniu
 
 class CustomLoginView(LoginView):
     template_name = 'core/login.html'
