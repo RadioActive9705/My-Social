@@ -5,6 +5,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.contrib.auth import logout
 
+from django.shortcuts import render
+
+
 from .models import Post, Profile
 from .forms import RegistationForm, ProfileForm # <-- Poprawiłem literówkę w RegistrationForm w kodzie niżej
 
@@ -53,6 +56,18 @@ def my_profile_redirect(request):
     if request.user.is_authenticated:
         return redirect('profile', username=request.user.username)
     return redirect('login')
+
+def add_post(request):
+    # Your logic here
+    return render(request, 'core/add_post.html')
+
+def edit_post(request):
+    # Your logic here
+    return render(request, 'core/edit_post.html')
+
+def delete_post(request):
+    # Your logic here
+    return render(request, 'core/delete_post.html')
     
 def register(request):
     if request.method == 'POST':

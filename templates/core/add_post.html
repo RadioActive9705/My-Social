@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dodaj post</title>
+</head>
+<body>
+    <h2>Dodaj post</h2>
+    <form method="post">
+        {% csrf_token %}
+        <!-- Dodaj tutaj pola formularza -->
+        <input type="text" name="title" placeholder="Tytuł posta" required><br>
+        <textarea name="content" placeholder="Treść posta" required></textarea><br>
+        <button type="submit">Dodaj</button>
+    </form>
+</body>
+</html>

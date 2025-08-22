@@ -19,6 +19,12 @@
       {{ form.as_p }}
       <button type="submit">Zapisz zmiany</button>
     </form>
+      <h3>Posty</h3>
+      <ul>
+        <li><a href="{% url 'add_post' %}">Dodaj post</a></li>
+        <li><a href="{% url 'edit_post' %}">Edytuj post</a></li>
+        <li><a href="{% url 'delete_post' %}">Usuń post</a></li>
+      </ul>
   {% else %}
     <p>
       <a href="{% url 'send_friend_request' profile.user.username %}">

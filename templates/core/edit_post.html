@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edytuj post</title>
+</head>
+<body>
+    <h2>Edytuj post</h2>
+    <form method="post">
+        {% csrf_token %}
+        <!-- Dodaj tutaj pola formularza -->
+        <input type="text" name="title" value="{{ post.title }}" required><br>
+        <textarea name="content" required>{{ post.content }}</textarea><br>
+        <button type="submit">Zapisz zmiany</button>
+    </form>
+</body>
+</html>

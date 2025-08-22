@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Usuń post</title>
+</head>
+<body>
+    <h2>Czy na pewno chcesz usunąć ten post?</h2>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Usuń</button>
+        <a href="{% url 'postlist' %}">Anuluj</a>
+    </form>
+</body>
+</html>
