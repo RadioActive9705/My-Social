@@ -9,7 +9,7 @@ from django.shortcuts import render
 
 
 from .models import Post, Profile
-from .forms import RegistationForm, ProfileForm # <-- Poprawiłem literówkę w RegistrationForm w kodzie niżej
+from .forms import RegistationForm, ProfileForm, PostForm
 
 # Pobierz model użytkownika, który jest aktualnie aktywny w projekcie
 User = get_user_model()
@@ -58,16 +58,36 @@ def my_profile_redirect(request):
     return redirect('login')
 
 def add_post(request):
-    # Your logic here
-    return render(request, 'core/add_post.html')
+    if request.method == 'POST':
+        form = PostForm(request.POST, request.FILES)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.author = request.user
+            post.save()
+            return redirect('postlist')
+    else:
+        form = PostForm()
+    return render(request, 'core/add_post.html', {'form': form})
 
 def edit_post(request):
-    # Your logic here
-    return render(request, 'core/edit_post.html')
+    post_id = request.GET.get('id')
+    post = get_object_or_404(Post, id=post_id, author=request.user)
+    if request.method == 'POST':
+        form = PostForm(request.POST, request.FILES, instance=post)
+        if form.is_valid():
+            form.save()
+            return redirect('postlist')
+    else:
+        form = PostForm(instance=post)
+    return render(request, 'core/edit_post.html', {'form': form, 'post': post})
 
 def delete_post(request):
-    # Your logic here
-    return render(request, 'core/delete_post.html')
+    post_id = request.GET.get('id')
+    post = get_object_or_404(Post, id=post_id, author=request.user)
+    if request.method == 'POST':
+        post.delete()
+        return redirect('postlist')
+    return render(request, 'core/delete_post.html', {'post': post})
     
 def register(request):
     if request.method == 'POST':

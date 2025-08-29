@@ -17,7 +17,20 @@
         <button class="secondary">Button</button>
     </div>
 
-<h1>lista postów 1</h1>
+
+<h1>Lista postów</h1>
+<a href="{% url 'postlist' %}">Przejdź do listy postów</a>
+
+<ul>
+    {% for post in posts %}
+        <li>
+            <strong>{{ post.author.username }}</strong>: {{ post.content }}
+            <br><small>{{ post.created_at }}</small>
+        </li>
+    {% empty %}
+        <li>Brak postów.</li>
+    {% endfor %}
+</ul>
 
 </body>
 
