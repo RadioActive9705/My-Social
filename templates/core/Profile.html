@@ -9,6 +9,8 @@
     <strong>Bio:</strong> {{ profile.bio|default:"(brak bio)" }}<br>
     {% if profile.avatar %}
     <img src="{{ profile.avatar.url }}" alt="Avatar" style="max-width:200px;">
+    {% else %}
+    <span>Brak avatara</span>
     {% endif %} 
   </div>
 
