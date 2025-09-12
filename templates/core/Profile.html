@@ -2,46 +2,45 @@
 {% block title %}Profil – {{ profile.user.username }}{% endblock %}
 
 {% block content %}
-  <h1>Profil użytkownika: {{ profile.user.username }}</h1>
-
-  <div>
-    <strong>Email:</strong> {{ profile.user.email }}<br>
-    <strong>Bio:</strong> {{ profile.bio|default:"(brak bio)" }}<br>
-    {% if profile.avatar %}
-    <img src="{{ profile.avatar.url }}" alt="Avatar" style="max-width:200px;">
-    {% else %}
-    <span>Brak avatara</span>
-    {% endif %} 
-  </div>
-
-  {% if request.user == profile.user %}
-    <h2>Edytuj profil</h2>
-    <form method="post" enctype="multipart/form-data">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit">Zapisz zmiany</button>
-    </form>
-      <h3>Posty</h3>
+<div class="container mt-5">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h1 class="card-title">{{ profile.user.username }}</h1>
+      <p><strong>Email:</strong> {{ profile.user.email }}</p>
+      <p><strong>Bio:</strong> {{ profile.bio|default:"(brak bio)" }}</p>
+      {% if profile.avatar %}
+        <img src="{{ profile.avatar.url }}" alt="Avatar" class="img-thumbnail mb-3" style="max-width:200px;">
+      {% else %}
+        <span class="text-muted">Brak avatara</span>
+      {% endif %}
+      {% if request.user == profile.user %}
+        <h2 class="mt-4">Edytuj profil</h2>
+        <form method="post" enctype="multipart/form-data" class="mb-4">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
+        </form>
         <h3>Twoje posty</h3>
-        <ul>
+        <ul class="list-group">
           {% for post in profile.user.posts.all %}
-            <li>
-              {{ post.content }}
-              <a href="{% url 'edit_post' %}?id={{ post.id }}">Edytuj</a>
-              <a href="{% url 'delete_post' %}?id={{ post.id }}">Usuń</a>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ post.content }}</span>
+              <span>
+                <a href="{% url 'edit_post' %}?id={{ post.id }}" class="btn btn-sm btn-warning">Edytuj</a>
+                <a href="{% url 'delete_post' %}?id={{ post.id }}" class="btn btn-sm btn-danger">Usuń</a>
+              </span>
             </li>
           {% empty %}
-            <li>Brak postów.</li>
+            <li class="list-group-item">Brak postów.</li>
           {% endfor %}
-          <li><a href="{% url 'add_post' %}">Dodaj post</a></li>
         </ul>
-  {% else %}
-    <p>
-      <a href="{% url 'send_friend_request' profile.user.username %}">
-        Wyślij zaproszenie do znajomych
-      </a>
-    </p>
-  {% endif %}
-
-  {% comment %} <p><a href="{% url 'post_list' %}">← Wróć do listy postów</a></p> {% endcomment %}
+        <a href="{% url 'add_post' %}" class="btn btn-success mt-3">Dodaj post</a>
+      {% else %}
+        <a href="{% url 'send_friend_request' profile.user.username %}" class="btn btn-info mt-3">
+          Wyślij zaproszenie do znajomych
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
 {% endblock %}

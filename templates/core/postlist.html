@@ -1,37 +1,46 @@
 {% load static %}
-
 <!DOCTYPE html>
-<html>
-
+<html lang="pl">
 <head>
-
-    <link rel="stylesheet" href='{% static 'core/css/style.css'%}'/>
+    <meta charset="utf-8">
+    <title>Lista postów</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'core/css/style.css' %}"/>
 </head>
-
-<body>
-
-    <div class="container">
-        <h1>Heading</h1>
-        <p>This is a description. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-        <button>Button</button>
-        <button class="secondary">Button</button>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h1 class="card-title text-center mb-4">Lista postów</h1>
+                                                {% if user.is_authenticated %}
+                                                    <a href="{% url 'add_post' %}" class="btn btn-success mb-3">Dodaj nowy post</a>
+                                                {% else %}
+                                                    <a href="{{ login_url }}" class="btn btn-success mb-3">Dodaj nowy post</a>
+                                                {% endif %}
+                        <ul class="list-group">
+                            {% for post in posts %}
+                                <li class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ post.author.username }}</strong>
+                                            <span class="text-muted">&bull; {{ post.created_at|date:"Y-m-d H:i" }}</span>
+                                        </div>
+                                    </div>
+                                    <p class="mt-2 mb-1">{{ post.content }}</p>
+                                    {% if post.image %}
+                                        <img src="{{ post.image.url }}" alt="Post image" class="img-fluid rounded" style="max-width:300px;">
+                                    {% endif %}
+                                </li>
+                            {% empty %}
+                                <li class="list-group-item text-center">Brak postów.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
-
-<h1>Lista postów</h1>
-<a href="{% url 'postlist' %}">Przejdź do listy postów</a>
-
-<ul>
-    {% for post in posts %}
-        <li>
-            <strong>{{ post.author.username }}</strong>: {{ post.content }}
-            <br><small>{{ post.created_at }}</small>
-        </li>
-    {% empty %}
-        <li>Brak postów.</li>
-    {% endfor %}
-</ul>
-
 </body>
-
 </html>

@@ -57,6 +57,9 @@ def my_profile_redirect(request):
         return redirect('profile', username=request.user.username)
     return redirect('login')
 
+from django.contrib.auth.decorators import login_required
+
+@login_required(login_url='/login/')
 def add_post(request):
     if request.method == 'POST':
         form = PostForm(request.POST, request.FILES)
@@ -103,4 +106,5 @@ def register(request):
 
 def post_list(request):
     posts = Post.objects.all().order_by('-created_at')
-    return render(request, 'core/postlist.html', {'posts': posts})
+    login_url = '/login/'
+    return render(request, 'core/postlist.html', {'posts': posts, 'login_url': login_url})

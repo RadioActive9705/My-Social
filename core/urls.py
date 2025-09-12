@@ -4,6 +4,8 @@ from .views import post_list, register, profile_view,my_profile_redirect
 from .views import CustomLoginView
 from . import views
 from .views import add_post, edit_post, delete_post
+from django.conf import settings
+from django.conf.urls.static import static
 
 
 
@@ -18,3 +20,6 @@ urlpatterns = [
     path('edit_post/', edit_post, name='edit_post'),
     path('delete_post/', delete_post, name='delete_post'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
