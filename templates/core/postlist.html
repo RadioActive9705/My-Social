@@ -14,29 +14,37 @@
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
                         <h1 class="card-title text-center mb-4">Lista postów</h1>
-                                                {% if user.is_authenticated %}
-                                                    <a href="{% url 'add_post' %}" class="btn btn-success mb-3">Dodaj nowy post</a>
-                                                {% else %}
-                                                    <a href="{{ login_url }}" class="btn btn-success mb-3">Dodaj nowy post</a>
-                                                {% endif %}
-                        <ul class="list-group">
-                            {% for post in posts %}
-                                <li class="list-group-item">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong>{{ post.author.username }}</strong>
-                                            <span class="text-muted">&bull; {{ post.created_at|date:"Y-m-d H:i" }}</span>
-                                        </div>
-                                    </div>
-                                    <p class="mt-2 mb-1">{{ post.content }}</p>
-                                    {% if post.image %}
-                                        <img src="{{ post.image.url }}" alt="Post image" class="img-fluid rounded" style="max-width:300px;">
-                                    {% endif %}
-                                </li>
-                            {% empty %}
-                                <li class="list-group-item text-center">Brak postów.</li>
-                            {% endfor %}
-                        </ul>
+                                                <ul class="list-group">
+                                                    {% for post in posts %}
+                                                        <li class="list-group-item">
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <div>
+                                                                    <strong>{{ post.author.username }}</strong>
+                                                                    <span class="text-muted">&bull; {{ post.created_at|date:"Y-m-d H:i" }}</span>
+                                                                </div>
+                                                                {% if user.is_authenticated and user == post.author %}
+                                                                    <form method="post" action="{% url 'delete_post' %}?id={{ post.id }}" style="display:inline;">
+                                                                        {% csrf_token %}
+                                                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Czy na pewno chcesz usunąć ten post?');">Usuń</button>
+                                                                    </form>
+                                                                {% endif %}
+                                                            </div>
+                                                            <p class="mt-2 mb-1">{{ post.content }}</p>
+                                                            {% if post.image %}
+                                                                <img src="{{ post.image.url }}" alt="Post image" class="img-fluid rounded" style="max-width:300px;">
+                                                            {% endif %}
+                                                        </li>
+                                                    {% empty %}
+                                                        <li class="list-group-item text-center">Brak postów.</li>
+                                                    {% endfor %}
+                                                    <li class="list-group-item text-center bg-light">
+                                                        {% if user.is_authenticated %}
+                                                            <a href="{% url 'add_post' %}" class="btn btn-success">Dodaj nowy post</a>
+                                                        {% else %}
+                                                            <a href="{{ login_url }}" class="btn btn-success">Dodaj nowy post</a>
+                                                        {% endif %}
+                                                    </li>
+                                                </ul>
                     </div>
                 </div>
             </div>
