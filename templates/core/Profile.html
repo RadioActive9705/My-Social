@@ -14,6 +14,83 @@
       {% else %}
         <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-2" style="width:140px; height:140px; border:6px solid #fff; font-size:2rem; color:#fff;">?</div>
       {% endif %}
+      {% if request.user == profile.user %}
+        <!-- Button trigger modal -->
+        <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="openCustomModal()">
+          <i class="bi bi-camera"></i> Zmień zdjęcie
+        </button>
+      {% endif %}
+
+<!-- Custom Modal for changing avatar -->
+{% if request.user == profile.user %}
+<div id="customAvatarModal" class="custom-modal">
+  <div class="custom-modal-content">
+    <span class="custom-modal-close" onclick="closeCustomModal()">&times;</span>
+    <h5 class="mb-3 text-primary">Zmień zdjęcie profilowe</h5>
+    <form method="post" enctype="multipart/form-data" action="">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="id_avatar" class="form-label">Nowe zdjęcie</label>
+        <div class="input-group">
+          {{ form.avatar }}
+          {% for error in form.avatar.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-secondary" onclick="closeCustomModal()">Anuluj</button>
+        <button type="submit" name="change_avatar" class="btn btn-primary">Zmień zdjęcie</button>
+      </div>
+    </form>
+  </div>
+</div>
+<style>
+.custom-modal {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.4);
+}
+.custom-modal-content {
+  background: #fff;
+  margin: 8vh auto;
+  padding: 32px 24px 24px 24px;
+  border-radius: 12px;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  position: relative;
+}
+.custom-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 18px;
+  font-size: 2rem;
+  color: #888;
+  cursor: pointer;
+}
+</style>
+<script>
+function openCustomModal() {
+  document.getElementById('customAvatarModal').style.display = 'block';
+}
+function closeCustomModal() {
+  document.getElementById('customAvatarModal').style.display = 'none';
+}
+// Close modal on outside click
+window.onclick = function(event) {
+  var modal = document.getElementById('customAvatarModal');
+  if (event.target == modal) {
+    closeCustomModal();
+  }
+}
+</script>
+{% endif %}
       <div class="bg-white px-4 py-2 rounded shadow-sm" style="margin-top:-10px;">
         <span class="fw-light text-secondary"><i class="bi bi-person-lines-fill"></i> {{ profile.bio|default:'(brak bio)' }}</span>
       </div>
@@ -22,10 +99,10 @@
     <!-- Profile menu navigation -->
     <nav class="nav nav-pills nav-justified bg-white border-bottom px-5" style="margin-top:-1px;">
       <a class="nav-link active" aria-current="page" href="#">Oś czasu</a>
-      <a class="nav-link" href="#">Informacje</a>
-      <a class="nav-link" href="#">Znajomi</a>
-      <a class="nav-link" href="#">Zdjęcia</a>
-      <a class="nav-link" href="#">Więcej</a>
+      <a class="nav-link" href="{% url 'informacje' %}">Informacje</a>
+      <a class="nav-link" href="{% url 'znajomi' %}">Znajomi</a>
+      <a class="nav-link" href="{% url 'zdjecia' %}">Zdjęcia</a>
+  <a class="nav-link" href="{% url 'ustawienia' %}">Ustawienia</a>
     </nav>
     <div class="card-body pt-5 mt-3">
       <div class="d-flex flex-column flex-md-row align-items-md-end align-items-center mb-3 gap-3" style="margin-left:180px;">
