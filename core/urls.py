@@ -36,6 +36,7 @@ urlpatterns = [
     path('zdjecia/', zdjecia_view, name='zdjecia'),
     path('informacje/', informacje_view, name='informacje'),
     path('ustawienia/', ustawienia_view, name='ustawienia'),
+    path('debug/avatar/', views.avatar_debug, name='avatar_debug'),
 ]
 
 if settings.DEBUG:

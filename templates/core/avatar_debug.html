@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Avatar debug{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h3>Avatar debug</h3>
+  <pre>{{ info|safe }}</pre>
+  <p><a href="/profile/{{ request.user.username }}/">Back to profile</a></p>
+</div>
+{% endblock %}

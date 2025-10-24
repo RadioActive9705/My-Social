@@ -10,9 +10,10 @@
     <!-- Avatar above menu -->
     <div style="width:100%; display:flex; flex-direction:column; align-items:center; position:relative; z-index:3; margin-top:-70px; margin-bottom:10px;">
       {% if profile.avatar %}
-        <img src="{{ profile.avatar.url }}" alt="Avatar" class="rounded-circle border border-3 border-white shadow mb-2" style="width:140px; height:140px; object-fit:cover; background:#fff;">
+        {# Use an img tag with object-fit: cover for consistent rendering #}
+        <img id="profile-avatar" src="{{ avatar_url|default:profile.avatar.url }}" alt="Avatar" class="rounded-circle border border-3 border-white shadow mb-2" style="width:140px; height:140px; object-fit:cover; display:block; background:#fff;" onerror="(function(e){console.error('Avatar image error', e); this.style.display='none'; var ph=document.getElementById('avatar-placeholder'); if(ph) ph.style.display='flex';})(event)">
       {% else %}
-        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-2" style="width:140px; height:140px; border:6px solid #fff; font-size:2rem; color:#fff;">?</div>
+        <div id="avatar-placeholder" class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-2" style="width:140px; height:140px; border:6px solid #fff; font-size:2rem; color:#fff;">?</div>
       {% endif %}
       {% if request.user == profile.user %}
         <!-- Button trigger modal -->

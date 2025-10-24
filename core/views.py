@@ -1,5 +1,7 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
+import os
+import time
 from django.urls import reverse
 from django.contrib.auth import login, get_user_model
 from django.contrib.auth.decorators import login_required
@@ -7,6 +9,7 @@ from django.contrib.auth.views import LoginView
 from django.contrib.auth import logout, update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib import messages
+from django.http import JsonResponse
 
 from .models import Post, Profile
 from .forms import RegistationForm, ProfileForm, PostForm
@@ -37,12 +40,54 @@ def ustawienia_view(request):
             messages.success(request, 'E-mail został zmieniony.')
 
     if request.method == 'POST' and 'change_avatar' in request.POST:
-        if profile_form.is_valid():
-            profile_form.save()
-            avatar_changed = True
-            messages.success(request, 'Zdjęcie profilowe zostało zmienione.')
+        print('DEBUG: ustawienia_view POST keys:', list(request.POST.keys()))
+        print('DEBUG: ustawienia_view FILES keys:', list(request.FILES.keys()))
+        # If an avatar file was uploaded, assign it directly to the profile to avoid
+        # requiring other form fields (privacy_settings) when only changing avatar.
+        uploaded = request.FILES.get('avatar')
+        if uploaded:
+            try:
+                print('DEBUG: direct-assign avatar file ->', uploaded.name)
+                profile.avatar = uploaded
+                profile.save()
+                avatar_changed = True
+                messages.success(request, 'Zdjęcie profilowe zostało zmienione.')
+                # If this is an AJAX request, return JSON with the new avatar URL
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    try:
+                        mtime = int(os.path.getmtime(profile.avatar.path))
+                    except Exception:
+                        mtime = int(time.time())
+                    avatar_url = f"{profile.avatar.url}?v={mtime}"
+                    return JsonResponse({'success': True, 'avatar_url': avatar_url, 'message': 'Zdjęcie zapisane.'})
+                return redirect('ustawienia')
+            except Exception as e:
+                print('DEBUG: avatar direct save failed ->', e)
         else:
-            print("Avatar upload errors:", profile_form.errors)
+            is_valid = profile_form.is_valid()
+            print('DEBUG: profile_form.is_valid ->', is_valid)
+            if not is_valid:
+                print('DEBUG: profile_form.errors ->', profile_form.errors)
+            if is_valid:
+                # show current avatar before save
+                try:
+                    print('DEBUG: before save, profile.avatar ->', getattr(profile, 'avatar'))
+                except Exception as e:
+                    print('DEBUG: before save avatar access error', e)
+                profile_form.save()
+                avatar_changed = True
+                messages.success(request, 'Zdjęcie profilowe zostało zmienione.')
+                try:
+                    print('DEBUG: after save, profile.avatar ->', profile.avatar.name, profile.avatar.url)
+                except Exception as e:
+                    print('DEBUG: after save avatar access error', e)
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    try:
+                        mtime = int(os.path.getmtime(profile.avatar.path))
+                    except Exception:
+                        mtime = int(time.time())
+                    avatar_url = f"{profile.avatar.url}?v={mtime}"
+                    return JsonResponse({'success': True, 'avatar_url': avatar_url, 'message': 'Zdjęcie zapisane.'})
 
     return render(request, 'core/ustawienia.html', {
         'password_form': password_form,
@@ -73,11 +118,36 @@ def profile_view(request, username):
     avatar_changed = False
     # Handle avatar change (from modal)
     if request.user == user and request.method == "POST" and 'change_avatar' in request.POST:
-        form = ProfileForm(request.POST, request.FILES, instance=profile)
-        if form.is_valid():
-            form.save()
-            avatar_changed = True
-            return redirect('profile', username=username)
+        print('DEBUG: profile_view POST keys:', list(request.POST.keys()))
+        print('DEBUG: profile_view FILES keys:', list(request.FILES.keys()))
+        uploaded = request.FILES.get('avatar')
+        if uploaded:
+            try:
+                print('DEBUG: profile direct-assign avatar ->', uploaded.name)
+                profile.avatar = uploaded
+                profile.save()
+                avatar_changed = True
+                return redirect('profile', username=username)
+            except Exception as e:
+                print('DEBUG: profile direct save failed ->', e)
+        else:
+            form = ProfileForm(request.POST, request.FILES, instance=profile)
+            valid = form.is_valid()
+            print('DEBUG: profile form is_valid ->', valid)
+            if not valid:
+                print('DEBUG: profile form errors ->', form.errors)
+            if valid:
+                try:
+                    print('DEBUG: profile before save avatar ->', getattr(profile, 'avatar'))
+                except Exception as e:
+                    print('DEBUG: error reading profile.avatar before save', e)
+                form.save()
+                avatar_changed = True
+                try:
+                    print('DEBUG: profile after save avatar ->', profile.avatar.name, profile.avatar.url)
+                except Exception as e:
+                    print('DEBUG: error reading profile.avatar after save', e)
+                return redirect('profile', username=username)
     # Handle normal profile edit
     elif request.user == user and request.method == "POST":
         form = ProfileForm(request.POST, request.FILES, instance=profile)
@@ -87,13 +157,47 @@ def profile_view(request, username):
     else:
         form = ProfileForm(instance=profile)
 
+    # Build an avatar URL with cache-busting query param based on file mtime
+    avatar_url = None
+    if profile.avatar:
+        try:
+            mtime = int(os.path.getmtime(profile.avatar.path))
+        except Exception:
+            mtime = int(time.time())
+        avatar_url = f"{profile.avatar.url}?v={mtime}"
+
     context = {
         'profile': profile,
         'form': form,
         'user_profile': user,
         'avatar_changed': avatar_changed,
+        'avatar_url': avatar_url,
     }
     return render(request, 'core/Profile.html', context)
+
+
+@login_required
+def avatar_debug(request):
+    """Return simple debug info about the logged-in user's avatar."""
+    profile = Profile.objects.get(user=request.user)
+    info = {
+        'avatar_field_name': None,
+        'avatar_url': None,
+        'avatar_path': None,
+        'exists_on_disk': False,
+        'mtime': None,
+    }
+    if profile.avatar:
+        info['avatar_field_name'] = profile.avatar.name
+        info['avatar_url'] = profile.avatar.url
+        try:
+            info['avatar_path'] = profile.avatar.path
+            info['exists_on_disk'] = os.path.exists(profile.avatar.path)
+            if info['exists_on_disk']:
+                info['mtime'] = int(os.path.getmtime(profile.avatar.path))
+        except Exception as e:
+            info['error'] = str(e)
+    return render(request, 'core/avatar_debug.html', {'info': info})
 
 
 def my_profile_redirect(request):

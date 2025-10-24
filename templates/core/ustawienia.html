@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Ustawienia konta{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="card shadow-sm p-4">
+    <h2 class="mb-4 text-primary"><i class="bi bi-gear-fill"></i> Ustawienia konta</h2>
+    <p>Tu możesz zarządzać ustawieniami swojego konta, prywatnością i powiadomieniami.</p>
+
+    <div class="row g-4">
+      <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body text-center">
+            <h5 class="mb-3 text-primary"><i class="bi bi-person-circle"></i> Zmień zdjęcie profilowe</h5>
+            <div class="mb-3">
+              {% if profile.avatar %}
+                <img id="settings-avatar" src="{{ profile.avatar.url }}?{{ avatar_changed|yesno:'1,0' }}{{ profile.avatar.name|default:'' }}" alt="Avatar" class="rounded-circle border shadow-sm" style="width: 120px; height: 120px; object-fit: cover;">
+              {% else %}
+                <i class="bi bi-person-circle" style="font-size: 120px; color: #ccc;"></i>
+              {% endif %}
+            </div>
+            <!-- Button to open modal -->
+            <button type="button" class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#changeAvatarModalSettings">
+              Zmień zdjęcie
+            </button>
+
+            <!-- Modal -->
+            <div class="modal fade" id="changeAvatarModalSettings" tabindex="-1" aria-labelledby="changeAvatarModalSettingsLabel" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="changeAvatarModalSettingsLabel">Zmień zdjęcie profilowe</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <form method="post" enctype="multipart/form-data" action="">
+                    <div class="modal-body">
+                      {% csrf_token %}
+                      <div class="mb-3">
+                        {{ profile_form.avatar.label_tag }}
+                        <div class="input-group">
+                          {{ profile_form.avatar }}
+                        </div>
+                        {% for error in profile_form.avatar.errors %}
+                          <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                        {% if profile_form.non_field_errors %}
+                          <div class="text-danger small mt-1">{{ profile_form.non_field_errors }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                      <button type="submit" name="change_avatar" class="btn btn-primary">Zmień zdjęcie</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+            {% if avatar_changed %}
+              <div class="alert alert-success mt-3">Zdjęcie profilowe zostało zmienione.</div>
+            {% endif %}
+            <script>
+            (function(){
+              function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                  const cookies = document.cookie.split(';');
+                  for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                      cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                      break;
+                    }
+                  }
+                }
+                return cookieValue;
+              }
+
+              const modal = document.getElementById('changeAvatarModalSettings');
+              if (!modal) return;
+              const form = modal.querySelector('form');
+              form.addEventListener('submit', function(e){
+                e.preventDefault();
+                const fd = new FormData(form);
+                // ensure server sees the 'change_avatar' marker (submit button name)
+                if (!fd.has('change_avatar')) fd.append('change_avatar', '1');
+                fetch(window.location.href, {
+                  method: 'POST',
+                  body: fd,
+                  credentials: 'same-origin',
+                  headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                  },
+                }).then(r => {
+                  if (!r.ok) {
+                    return r.text().then(text => { throw new Error('HTTP ' + r.status + ' - ' + text); });
+                  }
+                  const ct = r.headers.get('content-type') || '';
+                  if (ct.indexOf('application/json') !== -1) return r.json();
+                  return r.text().then(text => { throw new Error('Expected JSON response, got: ' + text); });
+                }).then(data=>{
+                  if (data.success) {
+                    // update avatar preview
+                    const img = document.getElementById('settings-avatar');
+                    if (img && data.avatar_url) {
+                      img.src = data.avatar_url;
+                    }
+                    // hide modal (Bootstrap)
+                    try { var bsModal = bootstrap.Modal.getInstance(modal); if(bsModal) bsModal.hide(); } catch(err){}
+                    // show temporary message
+                    const msg = document.createElement('div');
+                    msg.className = 'alert alert-success mt-3';
+                    msg.innerText = data.message || 'Zdjęcie zapisane.';
+                    modal.parentElement.insertBefore(msg, modal.nextSibling);
+                    setTimeout(()=>msg.remove(), 3000);
+                  } else {
+                    // show errors
+                    alert('Błąd: ' + (data.errors || JSON.stringify(data)));
+                  }
+                }).catch(err => { console.error(err); alert('Upload failed'); });
+              });
+            })();
+            </script>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body">
+            <h5 class="mb-3 text-primary"><i class="bi bi-key"></i> Zmień hasło</h5>
+            <form method="post">
+              {% csrf_token %}
+              {{ password_form.as_p }}
+              <button type="submit" name="change_password" class="btn btn-primary">Zmień hasło</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body">
+            <h5 class="mb-3 text-primary"><i class="bi bi-envelope-at"></i> Zmień e-mail</h5>
+            <form method="post">
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="new_email" class="form-label">Nowy e-mail</label>
+                <input type="email" class="form-control" id="new_email" name="new_email" required>
+              </div>
+              <button type="submit" name="change_email" class="btn btn-primary">Zmień e-mail</button>
+            </form>
+            {% if email_changed %}
+              <div class="alert alert-success mt-3">E-mail został zmieniony.</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
