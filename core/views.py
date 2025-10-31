@@ -10,6 +10,7 @@ from django.contrib.auth import logout, update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib import messages
 from django.http import JsonResponse
+import traceback
 
 from .models import Post, Profile
 from .forms import RegistationForm, ProfileForm, PostForm
@@ -42,52 +43,72 @@ def ustawienia_view(request):
     if request.method == 'POST' and 'change_avatar' in request.POST:
         print('DEBUG: ustawienia_view POST keys:', list(request.POST.keys()))
         print('DEBUG: ustawienia_view FILES keys:', list(request.FILES.keys()))
-        # If an avatar file was uploaded, assign it directly to the profile to avoid
-        # requiring other form fields (privacy_settings) when only changing avatar.
-        uploaded = request.FILES.get('avatar')
-        if uploaded:
-            try:
-                print('DEBUG: direct-assign avatar file ->', uploaded.name)
-                profile.avatar = uploaded
-                profile.save()
-                avatar_changed = True
-                messages.success(request, 'Zdjęcie profilowe zostało zmienione.')
-                # If this is an AJAX request, return JSON with the new avatar URL
-                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                    try:
-                        mtime = int(os.path.getmtime(profile.avatar.path))
-                    except Exception:
-                        mtime = int(time.time())
-                    avatar_url = f"{profile.avatar.url}?v={mtime}"
-                    return JsonResponse({'success': True, 'avatar_url': avatar_url, 'message': 'Zdjęcie zapisane.'})
-                return redirect('ustawienia')
-            except Exception as e:
-                print('DEBUG: avatar direct save failed ->', e)
-        else:
-            is_valid = profile_form.is_valid()
-            print('DEBUG: profile_form.is_valid ->', is_valid)
-            if not is_valid:
-                print('DEBUG: profile_form.errors ->', profile_form.errors)
-            if is_valid:
-                # show current avatar before save
+        try:
+            # If an avatar file was uploaded, assign it directly to the profile to avoid
+            # requiring other form fields (privacy_settings) when only changing avatar.
+            uploaded = request.FILES.get('avatar')
+            if uploaded:
                 try:
-                    print('DEBUG: before save, profile.avatar ->', getattr(profile, 'avatar'))
+                    print('DEBUG: direct-assign avatar file ->', uploaded.name)
+                    profile.avatar = uploaded
+                    profile.save()
+                    avatar_changed = True
+                    messages.success(request, 'Zdjęcie profilowe zostało zmienione.')
+                    # If this is an AJAX request, return JSON with the new avatar URL
+                    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                        try:
+                            mtime = int(os.path.getmtime(profile.avatar.path))
+                        except Exception:
+                            mtime = int(time.time())
+                        avatar_url = f"{profile.avatar.url}?v={mtime}"
+                        return JsonResponse({'success': True, 'avatar_url': avatar_url, 'message': 'Zdjęcie zapisane.'})
+                    return redirect('ustawienia')
                 except Exception as e:
-                    print('DEBUG: before save avatar access error', e)
-                profile_form.save()
-                avatar_changed = True
-                messages.success(request, 'Zdjęcie profilowe zostało zmienione.')
-                try:
-                    print('DEBUG: after save, profile.avatar ->', profile.avatar.name, profile.avatar.url)
-                except Exception as e:
-                    print('DEBUG: after save avatar access error', e)
-                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    tb = traceback.format_exc()
+                    print('DEBUG: avatar direct save failed ->', e)
+                    print(tb)
+                    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                        return JsonResponse({'success': False, 'error': str(e), 'traceback': tb}, status=500)
+                    # fall through to render with messages
+            else:
+                is_valid = profile_form.is_valid()
+                print('DEBUG: profile_form.is_valid ->', is_valid)
+                if not is_valid:
+                    print('DEBUG: profile_form.errors ->', profile_form.errors)
+                if is_valid:
+                    # show current avatar before save
                     try:
-                        mtime = int(os.path.getmtime(profile.avatar.path))
-                    except Exception:
-                        mtime = int(time.time())
-                    avatar_url = f"{profile.avatar.url}?v={mtime}"
-                    return JsonResponse({'success': True, 'avatar_url': avatar_url, 'message': 'Zdjęcie zapisane.'})
+                        print('DEBUG: before save, profile.avatar ->', getattr(profile, 'avatar'))
+                    except Exception as e:
+                        print('DEBUG: before save avatar access error', e)
+                    try:
+                        profile_form.save()
+                        avatar_changed = True
+                        messages.success(request, 'Zdjęcie profilowe zostało zmienione.')
+                        try:
+                            print('DEBUG: after save, profile.avatar ->', profile.avatar.name, profile.avatar.url)
+                        except Exception as e:
+                            print('DEBUG: after save avatar access error', e)
+                        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                            try:
+                                mtime = int(os.path.getmtime(profile.avatar.path))
+                            except Exception:
+                                mtime = int(time.time())
+                            avatar_url = f"{profile.avatar.url}?v={mtime}"
+                            return JsonResponse({'success': True, 'avatar_url': avatar_url, 'message': 'Zdjęcie zapisane.'})
+                    except Exception as e:
+                        tb = traceback.format_exc()
+                        print('DEBUG: profile_form.save failed ->', e)
+                        print(tb)
+                        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                            return JsonResponse({'success': False, 'error': str(e), 'traceback': tb}, status=500)
+                        # otherwise let rendering continue and show messages
+        except Exception as e:
+            tb = traceback.format_exc()
+            print('DEBUG: unexpected error in change_avatar handler ->', e)
+            print(tb)
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': str(e), 'traceback': tb}, status=500)
 
     return render(request, 'core/ustawienia.html', {
         'password_form': password_form,

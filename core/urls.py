@@ -1,5 +1,3 @@
-def ustawienia_view(request):
-    return render(request, 'core/ustawienia.html')
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from .views import post_list, register, profile_view,my_profile_redirect
@@ -35,7 +33,7 @@ urlpatterns = [
     path('znajomi/', znajomi_view, name='znajomi'),
     path('zdjecia/', zdjecia_view, name='zdjecia'),
     path('informacje/', informacje_view, name='informacje'),
-    path('ustawienia/', ustawienia_view, name='ustawienia'),
+    path('ustawienia/', views.ustawienia_view, name='ustawienia'),
     path('debug/avatar/', views.avatar_debug, name='avatar_debug'),
 ]
 
