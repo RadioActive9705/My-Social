@@ -113,27 +113,69 @@ window.onclick = function(event) {
         </div>
       </div>
       {% if request.user == profile.user %}
-        <div class="mb-4" style="margin-left:180px; max-width:500px;">
+        <div class="mb-4" style="margin-left:180px; max-width:900px;">
           <div class="card border-0 shadow-sm">
             <div class="card-body">
               <h5 class="mb-3 text-primary"><i class="bi bi-pencil-square"></i> Edytuj profil</h5>
               <form method="post" enctype="multipart/form-data" class="row g-3">
                 {% csrf_token %}
-                {% for field in form %}
+                <div class="col-12 col-md-4 text-center">
                   <div class="mb-3">
-                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-                    {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    {% if profile.avatar %}
+                      <img id="edit-profile-avatar" src="{{ avatar_url|default:profile.avatar.url }}" alt="Avatar" class="rounded-circle border border-3 border-white shadow mb-2" style="width:120px; height:120px; object-fit:cover; display:block;">
+                    {% else %}
+                      <div id="edit-avatar-placeholder" class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-2" style="width:120px; height:120px; border:6px solid #fff; font-size:1.5rem; color:#fff;">?</div>
+                    {% endif %}
                   </div>
-                {% endfor %}
-                <div class="col-12 d-flex justify-content-end">
-                  <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
+                  <div class="mb-3">
+                    <label for="id_avatar" class="form-label">Zmień zdjęcie</label>
+                    {{ form.avatar }}
+                    {% for err in form.avatar.errors %}
+                      <div class="text-danger small mt-1">{{ err }}</div>
+                    {% endfor %}
+                    <div class="form-text">Wybierz plik JPG/PNG. Maksymalny rozmiar zależy od serwera.</div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-8">
+                  <div class="mb-3">
+                    <label for="id_bio" class="form-label">Bio</label>
+                    {{ form.bio }}
+                    {% if form.bio.help_text %}<div class="form-text">{{ form.bio.help_text }}</div>{% endif %}
+                    {% for err in form.bio.errors %}
+                      <div class="text-danger small mt-1">{{ err }}</div>
+                    {% endfor %}
+                  </div>
+                  <div class="mb-3">
+                    <label for="id_privacy_settings" class="form-label">Prywatność</label>
+                    {{ form.privacy_settings }}
+                    {% for err in form.privacy_settings.errors %}
+                      <div class="text-danger small mt-1">{{ err }}</div>
+                    {% endfor %}
+                  </div>
+                  <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'profile' username=profile.user.username %}" class="btn btn-secondary">Anuluj</a>
+                    <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
+                  </div>
                 </div>
               </form>
             </div>
           </div>
         </div>
+        <script>
+        (function(){
+          const fileInput = document.querySelector('input[name="avatar"]');
+          if (!fileInput) return;
+          fileInput.addEventListener('change', function(e){
+            const f = this.files && this.files[0];
+            if(!f) return;
+            const url = URL.createObjectURL(f);
+            const img = document.getElementById('edit-profile-avatar');
+            const ph = document.getElementById('edit-avatar-placeholder');
+            if (img) { img.src = url; img.style.display = 'block'; }
+            if (ph) ph.style.display = 'none';
+          });
+        })();
+        </script>
         <div class="mt-5">
           <h4 class="mb-3">Twoje posty</h4>
           <ul class="list-group">

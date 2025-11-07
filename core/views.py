@@ -13,6 +13,7 @@ from django.http import JsonResponse
 import traceback
 
 from .models import Post, Profile
+from django.db.models import Q
 from .forms import RegistationForm, ProfileForm, PostForm
 
 # Pobierz model użytkownika, który jest aktualnie aktywny w projekcie
@@ -219,6 +220,71 @@ def avatar_debug(request):
         except Exception as e:
             info['error'] = str(e)
     return render(request, 'core/avatar_debug.html', {'info': info})
+
+
+@login_required
+def znajomi_view(request):
+    """Show a list of other users with their profile summary."""
+    users = User.objects.exclude(id=request.user.id).select_related()
+    profiles = Profile.objects.filter(user__in=users).select_related('user')
+    entries = []
+    for p in profiles:
+        avatar_url = None
+        if p.avatar:
+            try:
+                mtime = int(os.path.getmtime(p.avatar.path))
+            except Exception:
+                mtime = int(time.time())
+            avatar_url = f"{p.avatar.url}?v={mtime}"
+        entries.append({
+            'username': p.user.username,
+            'full_name': f"{p.user.first_name} {p.user.last_name}".strip(),
+            'avatar_url': avatar_url,
+            'bio': p.bio,
+        })
+    return render(request, 'core/znajomi.html', {'entries': entries})
+
+
+@login_required
+def find_friends(request):
+    q = request.GET.get('q', '').strip()
+    entries = []
+    if q:
+        # search username, first_name, last_name
+        users = User.objects.filter(
+            Q(username__icontains=q) |
+            Q(first_name__icontains=q) |
+            Q(last_name__icontains=q)
+        ).exclude(id=request.user.id)
+        profiles = Profile.objects.filter(user__in=users).select_related('user')
+        for p in profiles:
+            avatar_url = None
+            if p.avatar:
+                try:
+                    mtime = int(os.path.getmtime(p.avatar.path))
+                except Exception:
+                    mtime = int(time.time())
+                avatar_url = f"{p.avatar.url}?v={mtime}"
+            entries.append({
+                'username': p.user.username,
+                'full_name': f"{p.user.first_name} {p.user.last_name}".strip(),
+                'avatar_url': avatar_url,
+                'bio': p.bio,
+            })
+    return render(request, 'core/find_friends.html', {'entries': entries, 'query': q})
+
+
+@login_required
+def zdjecia_view(request):
+    """Simple view to render the user's photos page."""
+    # For now render template; later we can populate with user's post images or album entries
+    return render(request, 'core/zdjecia.html')
+
+
+@login_required
+def informacje_view(request):
+    """Render the information/about profile page."""
+    return render(request, 'core/informacje.html')
 
 
 def my_profile_redirect(request):

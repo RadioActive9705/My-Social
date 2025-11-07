@@ -9,16 +9,7 @@ from django.conf.urls.static import static
 
 
 
-from django.shortcuts import render
-
-def znajomi_view(request):
-    return render(request, 'core/znajomi.html')
-
-def zdjecia_view(request):
-    return render(request, 'core/zdjecia.html')
-
-def informacje_view(request):
-    return render(request, 'core/informacje.html')
+from .views import znajomi_view
 
 urlpatterns = [
     path('',      post_list ,          name='postlist'),
@@ -31,8 +22,9 @@ urlpatterns = [
     path('edit_post/', edit_post, name='edit_post'),
     path('delete_post/', delete_post, name='delete_post'),
     path('znajomi/', znajomi_view, name='znajomi'),
-    path('zdjecia/', zdjecia_view, name='zdjecia'),
-    path('informacje/', informacje_view, name='informacje'),
+    path('znajomi/szukaj/', views.find_friends, name='find_friends'),
+    path('zdjecia/', views.zdjecia_view, name='zdjecia'),
+    path('informacje/', views.informacje_view, name='informacje'),
     path('ustawienia/', views.ustawienia_view, name='ustawienia'),
     path('debug/avatar/', views.avatar_debug, name='avatar_debug'),
 ]
