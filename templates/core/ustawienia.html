@@ -8,20 +8,26 @@
 
     <div class="row g-4">
       <div class="col-12 col-md-4">
-        <div class="card border-0 shadow-sm mb-4">
-          <div class="card-body text-center">
-            <h5 class="mb-3 text-primary"><i class="bi bi-person-circle"></i> Zmień zdjęcie profilowe</h5>
-            <div class="mb-3">
-              {% if profile.avatar %}
-                <img id="settings-avatar" src="{{ profile.avatar.url }}?{{ avatar_changed|yesno:'1,0' }}{{ profile.avatar.name|default:'' }}" alt="Avatar" class="rounded-circle border shadow-sm" style="width: 120px; height: 120px; object-fit: cover;">
-              {% else %}
-                <i class="bi bi-person-circle" style="font-size: 120px; color: #ccc;"></i>
-              {% endif %}
+        <div class="card h-100 border-0 shadow-sm mb-4">
+          <div class="card-body text-center d-flex flex-column justify-content-between">
+            <div>
+              <div class="mb-3">
+                <h5 class="mb-2 text-primary"><i class="bi bi-person-circle"></i> Zmień zdjęcie profilowe</h5>
+                {% if profile.avatar %}
+                  <img id="settings-avatar" src="{{ profile.avatar.url }}" alt="Avatar" class="rounded-circle border shadow-sm mb-2" style="width: 120px; height: 120px; object-fit: cover;">
+                {% else %}
+                  <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" style="width:120px; height:120px; border:1px solid #e9ecef;">
+                    <i class="bi bi-person" style="font-size:48px; color:#adb5bd"></i>
+                  </div>
+                {% endif %}
+              </div>
+              <p class="text-muted small">Zaktualizuj swoje zdjęcie profilowe. Najlepiej kwadratowe zdjęcie JPG/PNG.</p>
             </div>
-            <!-- Button to open modal -->
-            <button type="button" class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#changeAvatarModalSettings">
-              Zmień zdjęcie
-            </button>
+            <div class="mt-3">
+              <button type="button" class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#changeAvatarModalSettings">
+                <i class="bi bi-upload me-1"></i> Zmień zdjęcie
+              </button>
+            </div>
 
             <!-- Modal -->
             <div class="modal fade" id="changeAvatarModalSettings" tabindex="-1" aria-labelledby="changeAvatarModalSettingsLabel" aria-hidden="true">
@@ -46,108 +52,77 @@
                           <div class="text-danger small mt-1">{{ profile_form.non_field_errors }}</div>
                         {% endif %}
                       </div>
+                      <div class="form-text small text-muted">Maksymalny rozmiar zależy od serwera. Preferowane proporcje 1:1.</div>
                     </div>
                     <div class="modal-footer">
                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-                      <button type="submit" name="change_avatar" class="btn btn-primary">Zmień zdjęcie</button>
+                      <button type="submit" name="change_avatar" class="btn btn-primary">Zapisz</button>
                     </div>
                   </form>
                 </div>
               </div>
             </div>
-            {% if avatar_changed %}
-              <div class="alert alert-success mt-3">Zdjęcie profilowe zostało zmienione.</div>
-            {% endif %}
-            <script>
-            (function(){
-              function getCookie(name) {
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                  const cookies = document.cookie.split(';');
-                  for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                      cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                      break;
-                    }
-                  }
-                }
-                return cookieValue;
-              }
+          </div>
+        </div>
+      </div>
 
-              const modal = document.getElementById('changeAvatarModalSettings');
-              if (!modal) return;
-              const form = modal.querySelector('form');
-              form.addEventListener('submit', function(e){
-                e.preventDefault();
-                const fd = new FormData(form);
-                // ensure server sees the 'change_avatar' marker (submit button name)
-                if (!fd.has('change_avatar')) fd.append('change_avatar', '1');
-                fetch(window.location.href, {
-                  method: 'POST',
-                  body: fd,
-                  credentials: 'same-origin',
-                  headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': getCookie('csrftoken')
-                  },
-                }).then(r => {
-                  if (!r.ok) {
-                    return r.text().then(text => { throw new Error('HTTP ' + r.status + ' - ' + text); });
-                  }
-                  const ct = r.headers.get('content-type') || '';
-                  if (ct.indexOf('application/json') !== -1) return r.json();
-                  return r.text().then(text => { throw new Error('Expected JSON response, got: ' + text); });
-                }).then(data=>{
-                  if (data.success) {
-                    // update avatar preview
-                    const img = document.getElementById('settings-avatar');
-                    if (img && data.avatar_url) {
-                      img.src = data.avatar_url;
-                    }
-                    // hide modal (Bootstrap)
-                    try { var bsModal = bootstrap.Modal.getInstance(modal); if(bsModal) bsModal.hide(); } catch(err){}
-                    // show temporary message
-                    const msg = document.createElement('div');
-                    msg.className = 'alert alert-success mt-3';
-                    msg.innerText = data.message || 'Zdjęcie zapisane.';
-                    modal.parentElement.insertBefore(msg, modal.nextSibling);
-                    setTimeout(()=>msg.remove(), 3000);
-                  } else {
-                    // show errors
-                    alert('Błąd: ' + (data.errors || JSON.stringify(data)));
-                  }
-                }).catch(err => { console.error(err); alert(err && err.message ? err.message : 'Upload failed'); });
-              });
-            })();
-            </script>
-          </div>
-        </div>
-      </div>
       <div class="col-12 col-md-4">
-        <div class="card border-0 shadow-sm mb-4">
-          <div class="card-body">
-            <h5 class="mb-3 text-primary"><i class="bi bi-key"></i> Zmień hasło</h5>
-            <form method="post">
-              {% csrf_token %}
-              {{ password_form.as_p }}
+        <div class="card h-100 border-0 shadow-sm mb-4">
+          <div class="card-body password-card d-flex flex-column">
+            <div>
+              <h5 class="mb-3 text-primary"><i class="bi bi-key"></i> Zmień hasło</h5>
+              <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label class="form-label">Aktualne hasło</label>
+                  {{ password_form.old_password }}
+                  {% for err in password_form.old_password.errors %}
+                    <div class="text-danger small mt-1">{{ err }}</div>
+                  {% endfor %}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Nowe hasło</label>
+                  {{ password_form.new_password1 }}
+                  {% if password_form.new_password1.help_text %}
+                    <div class="form-text small">{{ password_form.new_password1.help_text }}</div>
+                  {% endif %}
+                  {% for err in password_form.new_password1.errors %}
+                    <div class="text-danger small mt-1">{{ err }}</div>
+                  {% endfor %}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Potwierdź nowe hasło</label>
+                  {{ password_form.new_password2 }}
+                  {% for err in password_form.new_password2.errors %}
+                    <div class="text-danger small mt-1">{{ err }}</div>
+                  {% endfor %}
+                </div>
+            </div>
+            <div class="mt-auto d-grid">
               <button type="submit" name="change_password" class="btn btn-primary">Zmień hasło</button>
-            </form>
+            </div>
+              </form>
           </div>
         </div>
       </div>
+
       <div class="col-12 col-md-4">
-        <div class="card border-0 shadow-sm mb-4">
-          <div class="card-body">
-            <h5 class="mb-3 text-primary"><i class="bi bi-envelope-at"></i> Zmień e-mail</h5>
-            <form method="post">
-              {% csrf_token %}
-              <div class="mb-3">
-                <label for="new_email" class="form-label">Nowy e-mail</label>
-                <input type="email" class="form-control" id="new_email" name="new_email" required>
-              </div>
-              <button type="submit" name="change_email" class="btn btn-primary">Zmień e-mail</button>
-            </form>
+        <div class="card h-100 border-0 shadow-sm mb-4">
+          <div class="card-body d-flex flex-column">
+            <div>
+              <h5 class="mb-3 text-primary"><i class="bi bi-envelope-at"></i> Zmień e-mail</h5>
+              <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label for="new_email" class="form-label">Nowy e-mail</label>
+                  <input type="email" class="form-control" id="new_email" name="new_email" placeholder="nowy@przyklad.pl" required>
+                </div>
+                <div class="small text-muted mb-3">Po zmianie e-maila otrzymasz potwierdzenie na nowy adres (jeśli skonfigurowane).</div>
+            </div>
+            <div class="mt-auto d-grid">
+              <button type="submit" name="change_email" class="btn btn-outline-primary">Zmień e-mail</button>
+            </div>
+              </form>
             {% if email_changed %}
               <div class="alert alert-success mt-3">E-mail został zmieniony.</div>
             {% endif %}
@@ -157,4 +132,36 @@
     </div>
   </div>
 </div>
+<script>
+// Small enhancement script: add Bootstrap classes to password inputs and improve file input UX
+(function(){
+  try {
+    document.querySelectorAll('.password-card input[type="password"]').forEach(function(inp){
+      if (!inp.classList.contains('form-control')) inp.classList.add('form-control');
+      if (!inp.id) inp.id = inp.name || Math.random().toString(36).slice(2,8);
+    });
+
+    const modal = document.getElementById('changeAvatarModalSettings');
+    if (modal) {
+      const fileInput = modal.querySelector('input[type="file"]');
+      if (fileInput) {
+        fileInput.classList.add('form-control');
+        // append filename helper
+        var wrapper = fileInput.closest('.mb-3') || fileInput.parentNode;
+        if (wrapper) {
+          var info = document.createElement('div');
+          info.className = 'small text-muted mt-2';
+          info.id = 'avatar-modal-filename';
+          info.textContent = 'Brak wybranego pliku';
+          wrapper.appendChild(info);
+          fileInput.addEventListener('change', function(){
+            var f = this.files && this.files[0];
+            info.textContent = f ? f.name : 'Brak wybranego pliku';
+          });
+        }
+      }
+    }
+  } catch (err) { console.error('ustawienia small script error', err); }
+})();
+</script>
 {% endblock %}

@@ -119,21 +119,33 @@ window.onclick = function(event) {
               <h5 class="mb-3 text-primary"><i class="bi bi-pencil-square"></i> Edytuj profil</h5>
               <form method="post" enctype="multipart/form-data" class="row g-3">
                 {% csrf_token %}
-                <div class="col-12 col-md-4 text-center">
-                  <div class="mb-3">
+                <div class="col-12 col-md-4">
+                  <div class="card border-0 bg-light shadow-sm p-3 text-center">
+                    <div class="mb-2">
+                      {% if profile.avatar %}
+                        <img id="edit-profile-avatar" src="{{ avatar_url|default:profile.avatar.url }}" alt="Avatar" class="rounded-circle shadow" style="width:130px; height:130px; object-fit:cover; border:6px solid #fff;">
+                      {% else %}
+                        <div id="edit-avatar-placeholder" class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-2" style="width:130px; height:130px; border:6px solid #fff; font-size:1.5rem; color:#fff;">?</div>
+                      {% endif %}
+                    </div>
+                    <h6 class="mb-1">Zmień zdjęcie</h6>
                     {% if profile.avatar %}
-                      <img id="edit-profile-avatar" src="{{ avatar_url|default:profile.avatar.url }}" alt="Avatar" class="rounded-circle border border-3 border-white shadow mb-2" style="width:120px; height:120px; object-fit:cover; display:block;">
-                    {% else %}
-                      <div id="edit-avatar-placeholder" class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-2" style="width:120px; height:120px; border:6px solid #fff; font-size:1.5rem; color:#fff;">?</div>
+                      <div class="mb-2 small text-muted">Obecne: <a href="{{ profile.avatar.url }}" target="_blank">{{ profile.avatar.name|default:"plik" }}</a></div>
+                      <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" value="1" id="avatar-clear" name="avatar-clear">
+                        <label class="form-check-label small text-muted" for="avatar-clear">Usuń obecne zdjęcie</label>
+                      </div>
                     {% endif %}
-                  </div>
-                  <div class="mb-3">
-                    <label for="id_avatar" class="form-label">Zmień zdjęcie</label>
-                    {{ form.avatar }}
+
+                    <div class="d-flex justify-content-center mt-2">
+                      <input type="file" name="avatar" id="id_avatar" class="d-none">
+                      <button type="button" id="avatar-browse" class="btn btn-outline-primary btn-sm me-2"><i class="bi bi-upload"></i> Wybierz plik</button>
+                      <span id="avatar-filename" class="align-self-center small text-muted">Brak wybranego pliku</span>
+                    </div>
                     {% for err in form.avatar.errors %}
-                      <div class="text-danger small mt-1">{{ err }}</div>
+                      <div class="text-danger small mt-2">{{ err }}</div>
                     {% endfor %}
-                    <div class="form-text">Wybierz plik JPG/PNG. Maksymalny rozmiar zależy od serwera.</div>
+                    <div class="form-text small mt-2">Wybierz plik JPG/PNG. Maksymalny rozmiar zależy od serwera.</div>
                   </div>
                 </div>
                 <div class="col-12 col-md-8">
@@ -163,17 +175,59 @@ window.onclick = function(event) {
         </div>
         <script>
         (function(){
-          const fileInput = document.querySelector('input[name="avatar"]');
-          if (!fileInput) return;
-          fileInput.addEventListener('change', function(e){
-            const f = this.files && this.files[0];
-            if(!f) return;
-            const url = URL.createObjectURL(f);
-            const img = document.getElementById('edit-profile-avatar');
-            const ph = document.getElementById('edit-avatar-placeholder');
-            if (img) { img.src = url; img.style.display = 'block'; }
-            if (ph) ph.style.display = 'none';
-          });
+          const fileInput = document.getElementById('id_avatar');
+          const browseBtn = document.getElementById('avatar-browse');
+          const filenameEl = document.getElementById('avatar-filename');
+          const img = document.getElementById('edit-profile-avatar');
+          const ph = document.getElementById('edit-avatar-placeholder');
+          const clearCheckbox = document.getElementById('avatar-clear');
+
+          if (browseBtn && fileInput) {
+            browseBtn.addEventListener('click', function(){ fileInput.click(); });
+          }
+
+          if (fileInput) {
+            fileInput.addEventListener('change', function(e){
+              const f = this.files && this.files[0];
+              if(!f) {
+                if (filenameEl) filenameEl.textContent = 'Brak wybranego pliku';
+                return;
+              }
+              if (filenameEl) filenameEl.textContent = f.name;
+              try {
+                const url = URL.createObjectURL(f);
+                if (img) { img.src = url; img.style.display = 'block'; }
+                if (ph) ph.style.display = 'none';
+                // uncheck clear if user selected a file
+                if (clearCheckbox) clearCheckbox.checked = false;
+              } catch(err) {
+                console.error('Preview error', err);
+              }
+            });
+          }
+
+          if (clearCheckbox) {
+            clearCheckbox.addEventListener('change', function(){
+              if (this.checked) {
+                // show placeholder and reset filename
+                if (img) img.style.display = 'none';
+                if (ph) ph.style.display = 'flex';
+                if (filenameEl) filenameEl.textContent = 'Brak wybranego pliku';
+                // clear file input
+                if (fileInput) fileInput.value = '';
+              } else {
+                // if unchecking and there's an existing avatar, show it
+                if (img && img.dataset && img.dataset.orig) {
+                  img.src = img.dataset.orig;
+                  img.style.display = 'block';
+                  if (ph) ph.style.display = 'none';
+                }
+              }
+            });
+          }
+
+          // store original avatar src so we can restore when clearing checkbox is undone
+          if (img && img.src) img.dataset.orig = img.src;
         })();
         </script>
         <div class="mt-5">

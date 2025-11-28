@@ -67,3 +67,71 @@ class Post(models.Model):
 
     def __str__(self):
         return f"{self.author.username}: {self.content[:20]}…"
+
+
+class FriendRequest(models.Model):
+    """Simple FriendRequest model for demo purposes.
+
+    status: 'pending', 'accepted', 'declined'
+    """
+    STATUS_PENDING = 'pending'
+    STATUS_ACCEPTED = 'accepted'
+    STATUS_DECLINED = 'declined'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_ACCEPTED, 'Accepted'),
+        (STATUS_DECLINED, 'Declined'),
+    ]
+
+    from_user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='friend_requests_sent', on_delete=models.CASCADE)
+    to_user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='friend_requests_received', on_delete=models.CASCADE)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('from_user', 'to_user')
+
+    def accept(self):
+        from django.db import IntegrityError
+        self.status = self.STATUS_ACCEPTED
+        self.save(update_fields=['status'])
+        # Create a Friendship record when a request is accepted
+        try:
+            Friendship.befriend(self.from_user, self.to_user)
+        except Exception:
+            # ignore friendship creation errors
+            pass
+
+    def decline(self):
+        self.status = self.STATUS_DECLINED
+        self.save(update_fields=['status'])
+
+    def __str__(self):
+        return f"{self.from_user.username} -> {self.to_user.username} ({self.status})"
+
+
+class Friendship(models.Model):
+    """Symmetric friendship relation. We store user_a < user_b to keep uniqueness."""
+    user_a = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='friendships_a', on_delete=models.CASCADE)
+    user_b = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='friendships_b', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = (('user_a', 'user_b'),)
+
+    @classmethod
+    def befriend(cls, u1, u2):
+        # ensure consistent ordering
+        if u1.id == u2.id:
+            raise ValueError('Cannot befriend self')
+        a, b = (u1, u2) if u1.id < u2.id else (u2, u1)
+        obj, created = cls.objects.get_or_create(user_a=a, user_b=b)
+        return obj
+
+    @classmethod
+    def are_friends(cls, u1, u2):
+        a, b = (u1, u2) if u1.id < u2.id else (u2, u1)
+        return cls.objects.filter(user_a=a, user_b=b).exists()
+
+    def __str__(self):
+        return f"{self.user_a.username} <-> {self.user_b.username}"

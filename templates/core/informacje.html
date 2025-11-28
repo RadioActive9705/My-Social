@@ -3,8 +3,53 @@
 {% block content %}
 <div class="container py-5">
   <div class="card shadow-sm p-4">
-    <h2 class="mb-4 text-primary"><i class="bi bi-info-circle-fill"></i> Informacje</h2>
-    <p>Tu pojawią się szczegółowe informacje o użytkowniku.</p>
+    <div class="d-flex align-items-center mb-4">
+      <h2 class="mb-0 text-primary me-3"><i class="bi bi-info-circle-fill"></i> Informacje</h2>
+      <small class="text-muted">Szczegóły Twojego profilu</small>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-md-4 text-center">
+        <div class="mb-3">
+          {% if profile.avatar %}
+            <img src="{{ avatar_url|default:profile.avatar.url }}" alt="Avatar" class="rounded-circle shadow-sm" style="width:150px; height:150px; object-fit:cover; border:6px solid #fff;">
+          {% else %}
+            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto" style="width:150px; height:150px; border:6px solid #fff; font-size:2rem; color:#fff;">?</div>
+          {% endif %}
+        </div>
+        <h5 class="mb-0">{{ request.user.get_full_name|default:request.user.username }}</h5>
+        <div class="text-muted small">@{{ request.user.username }}</div>
+      </div>
+
+      <div class="col-12 col-md-8">
+        <div class="mb-3">
+          <h6 class="text-secondary">Kontakt</h6>
+          <div class="d-flex flex-column flex-sm-row gap-3">
+            <div><strong>Email:</strong> <a href="mailto:{{ request.user.email }}">{{ request.user.email }}</a></div>
+            <div><strong>Dołączył(a):</strong> {{ request.user.date_joined|date:'j M Y' }}</div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <h6 class="text-secondary">O mnie</h6>
+          <p class="mb-0">{{ profile.bio|linebreaksbr|default:'Brak dodatkowych informacji.' }}</p>
+        </div>
+
+        <div class="mb-3">
+          <h6 class="text-secondary">Ustawienia prywatności</h6>
+          {% if profile.privacy_settings %}
+            <pre class="small bg-light p-2 rounded">{{ profile.privacy_settings }}</pre>
+          {% else %}
+            <div class="text-muted">Brak ustawień prywatności.</div>
+          {% endif %}
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <a href="{% url 'profile' username=request.user.username %}" class="btn btn-outline-primary">Zobacz profil</a>
+          <a href="{% url 'ustawienia' %}" class="btn btn-primary">Edytuj informacje</a>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

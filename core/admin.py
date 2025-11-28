@@ -10,6 +10,8 @@ from .models import CustomUser, Profile
 class ProfileAdmin(admin.ModelAdmin):
     list_display=('user','bio')
     search_fields=('user_username',)
+    
+    
 
 
     

@@ -3,8 +3,68 @@
 {% block content %}
 <div class="container py-5">
   <div class="card shadow-sm p-4">
-    <h2 class="mb-4 text-primary"><i class="bi bi-images"></i> Zdjęcia</h2>
-    <p>Tu pojawią się Twoje zdjęcia.</p>
+    <div class="d-flex align-items-center mb-4">
+      <h2 class="mb-0 text-primary me-3"><i class="bi bi-images"></i> Zdjęcia</h2>
+      <small class="text-muted">Galeria Twoich zdjęć</small>
+    </div>
+
+    {% if images and images|length > 0 %}
+      <div class="row g-3">
+        {% for img in images %}
+          <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <div class="card border-0">
+              <button type="button" class="btn p-0 border-0 w-100 gallery-thumb" data-bs-toggle="modal" data-bs-target="#galleryModal" data-src="{{ img.url }}" data-caption="{{ img.caption|escape }}">
+                <img src="{{ img.url }}" alt="{{ img.caption|default:'zdjęcie' }}" class="img-fluid rounded" style="width:100%; height:130px; object-fit:cover; display:block;">
+              </button>
+              <div class="mt-2 small text-truncate" title="{{ img.caption }}">{{ img.caption }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Lightbox modal -->
+      <div class="modal fade" id="galleryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+          <div class="modal-content bg-transparent border-0">
+            <div class="modal-body p-0">
+              <div class="ratio ratio-16x9 bg-dark rounded">
+                <img id="galleryModalImg" src="" alt="" style="width:100%; height:100%; object-fit:contain;">
+              </div>
+              <div class="mt-2 p-2 bg-white rounded-bottom shadow-sm">
+                <div id="galleryModalCaption" class="small text-muted"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+      (function(){
+        var modal = document.getElementById('galleryModal');
+        if (!modal) return;
+        modal.addEventListener('show.bs.modal', function (event) {
+          var button = event.relatedTarget;
+          var src = button.getAttribute('data-src');
+          var caption = button.getAttribute('data-caption') || '';
+          var img = document.getElementById('galleryModalImg');
+          var cap = document.getElementById('galleryModalCaption');
+          if (img && src) img.src = src;
+          if (cap) cap.textContent = caption;
+        });
+      })();
+      </script>
+
+    {% else %}
+      <div class="text-center py-5">
+        <i class="bi bi-camera" style="font-size:48px; color:#6c757d"></i>
+        <h5 class="mt-3">Brak zdjęć</h5>
+        <p class="text-muted">Nie dodałeś jeszcze żadnych zdjęć. Możesz dodać zdjęcia w postach lub ustawić zdjęcie profilowe.</p>
+        <div class="d-flex justify-content-center gap-2">
+          <a href="{% url 'add_post' %}" class="btn btn-primary">Dodaj post ze zdjęciem</a>
+          <a href="{% url 'ustawienia' %}" class="btn btn-outline-secondary">Zmień zdjęcie profilowe</a>
+        </div>
+      </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
