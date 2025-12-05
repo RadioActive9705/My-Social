@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2>Chat z znajomymi</h2>
+  <div class="list-group mt-3">
+    {% for e in entries %}
+      <a href="{% url 'chat_room' e.username %}" class="list-group-item list-group-item-action d-flex align-items-center">
+        {% if e.avatar_url %}
+          <img src="{{ e.avatar_url }}" alt="avatar" class="rounded me-3" style="width:48px;height:48px;object-fit:cover;">
+        {% else %}
+          <div class="bg-secondary text-white rounded me-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;">{{ e.username|slice:":1"|upper }}</div>
+        {% endif %}
+        <div>
+          <div class="fw-bold">{{ e.full_name|default:e.username }}</div>
+          <div class="text-muted">@{{ e.username }}</div>
+        </div>
+      </a>
+    {% empty %}
+      <div class="text-muted">Brak znajomych do czatu.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

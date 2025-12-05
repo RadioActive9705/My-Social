@@ -2,6 +2,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 import os
 import time
+import json
 from django.urls import reverse
 from django.contrib.auth import login, get_user_model
 from django.contrib.auth.decorators import login_required
@@ -15,6 +16,8 @@ import traceback
 from .models import Post, Profile
 from django.db.models import Q
 from .forms import RegistationForm, ProfileForm, PostForm
+from .models import Message
+from django.conf import settings
 
 # Pobierz model użytkownika, który jest aktualnie aktywny w projekcie
 User = get_user_model()
@@ -669,3 +672,143 @@ def post_list(request):
     posts = Post.objects.all().order_by('-created_at')
     login_url = '/login/'
     return render(request, 'core/postlist.html', {'posts': posts, 'login_url': login_url})
+
+
+@login_required
+def chat_list(request):
+    """Show list of friends you can chat with."""
+    entries = []
+    try:
+        from .models import Friendship
+        fqs = Friendship.objects.filter(Q(user_a=request.user) | Q(user_b=request.user)).select_related('user_a', 'user_b')
+        for f in fqs:
+            other = f.user_b if f.user_a == request.user else f.user_a
+            avatar_url = None
+            try:
+                if hasattr(other, 'profile') and other.profile.avatar:
+                    try:
+                        mtime = int(os.path.getmtime(other.profile.avatar.path))
+                    except Exception:
+                        mtime = int(time.time())
+                    avatar_url = f"{other.profile.avatar.url}?v={mtime}"
+            except Exception:
+                avatar_url = None
+            entries.append({'username': other.username, 'full_name': f"{other.first_name} {other.last_name}".strip(), 'avatar_url': avatar_url})
+    except Exception:
+        entries = []
+    return render(request, 'core/chat_list.html', {'entries': entries})
+
+
+@login_required
+def chat_room(request, username):
+    """Chat room between request.user and username (must be friends)."""
+    other = get_object_or_404(User, username=username)
+    # ensure friendship exists
+    try:
+        from .models import Friendship
+        if not Friendship.are_friends(request.user, other):
+            messages.error(request, 'Nie macie połączenia znajomości. Nie można rozpocząć czatu.')
+            return redirect('chat_list')
+    except Exception:
+        messages.error(request, 'Czat tymczasowo niedostępny.')
+        return redirect('chat_list')
+
+    # load recent messages (last 100)
+    msgs = Message.objects.filter(
+        Q(sender=request.user, recipient=other) | Q(sender=other, recipient=request.user)
+    ).order_by('-created_at')[:100]
+    msgs = list(reversed(msgs))
+    return render(request, 'core/chat_room.html', {'other': other, 'messages': msgs})
+
+
+@login_required
+def send_message(request, username):
+    """AJAX endpoint to send a message to a friend."""
+    if request.method != 'POST' or request.headers.get('x-requested-with') != 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    other = get_object_or_404(User, username=username)
+    try:
+        from .models import Friendship
+        if not Friendship.are_friends(request.user, other):
+            return JsonResponse({'success': False, 'error': 'Not friends'}, status=403)
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Chat unavailable'}, status=500)
+    try:
+        # Support JSON body and multipart/form-data (for image/audio upload)
+        content = ''
+        img = None
+        audio = None
+        if request.content_type and request.content_type.startswith('multipart/'):
+            # FormData submission
+            content = request.POST.get('content', '').strip()
+            img = request.FILES.get('image')
+            audio = request.FILES.get('audio')
+        else:
+            data = json.loads(request.body.decode('utf-8') or '{}')
+            content = data.get('content', '').strip()
+
+        if not content and not img and not audio:
+            return JsonResponse({'success': False, 'error': 'Empty message'}, status=400)
+
+        m = Message(sender=request.user, recipient=other, content=content)
+        if img:
+            m.image = img
+        if audio:
+            m.audio = audio
+        m.save()
+
+        msg_data = {'id': m.id, 'sender': m.sender.username, 'content': m.content, 'created_at': m.created_at.isoformat()}
+        if m.image:
+            try:
+                mtime = int(os.path.getmtime(m.image.path))
+            except Exception:
+                mtime = int(time.time())
+            msg_data['image_url'] = f"{m.image.url}?v={mtime}"
+        if getattr(m, 'audio', None):
+            try:
+                mtime = int(os.path.getmtime(m.audio.path))
+            except Exception:
+                mtime = int(time.time())
+            msg_data['audio_url'] = f"{m.audio.url}?v={mtime}"
+
+        return JsonResponse({'success': True, 'message': msg_data})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def fetch_messages(request, username):
+    """AJAX endpoint to fetch messages for a chat; optional `after_id` GET param to fetch only newer msgs."""
+    other = get_object_or_404(User, username=username)
+    try:
+        from .models import Friendship
+        if not Friendship.are_friends(request.user, other):
+            return JsonResponse({'success': False, 'error': 'Not friends'}, status=403)
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Chat unavailable'}, status=500)
+
+    after_id = request.GET.get('after_id')
+    qs = Message.objects.filter(Q(sender=request.user, recipient=other) | Q(sender=other, recipient=request.user)).order_by('created_at')
+    if after_id:
+        try:
+            after_id = int(after_id)
+            qs = qs.filter(id__gt=after_id)
+        except ValueError:
+            pass
+    msgs = []
+    for m in qs:
+        item = {'id': m.id, 'sender': m.sender.username, 'content': m.content, 'created_at': m.created_at.isoformat()}
+        if getattr(m, 'image', None):
+            try:
+                mtime = int(os.path.getmtime(m.image.path))
+            except Exception:
+                mtime = int(time.time())
+            item['image_url'] = f"{m.image.url}?v={mtime}"
+        if getattr(m, 'audio', None):
+            try:
+                mtime = int(os.path.getmtime(m.audio.path))
+            except Exception:
+                mtime = int(time.time())
+            item['audio_url'] = f"{m.audio.url}?v={mtime}"
+        msgs.append(item)
+    return JsonResponse({'success': True, 'messages': msgs})

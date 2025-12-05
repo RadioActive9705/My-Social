@@ -1,13 +1,79 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head><meta charset="utf-8"><title>Rejestracja</title></head>
-<body>
-  <h1>Zarejestruj się</h1>
-  <form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Rejestruj</button>
-  </form>
-  <p>Masz już konto? <a href="{% url 'login' %}">Zaloguj się</a></p>
-</body>
-</html>
+{% extends 'base.html' %}
+{% block title %}Rejestracja{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="row g-0">
+          <div class="col-md-5 d-none d-md-flex align-items-center justify-content-center bg-primary text-white p-4">
+            <div class="text-center">
+              <h3 class="fw-bold">Witaj!</h3>
+              <p class="mb-0">Dołącz do naszej społeczności — dziel się zdjęciami, znajdź znajomych i prowadź rozmowy.</p>
+            </div>
+          </div>
+          <div class="col-12 col-md-7">
+            <div class="card-body p-4">
+              <h4 class="card-title mb-3">Zarejestruj się</h4>
+              {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+              {% endif %}
+              <form method="post" novalidate>
+                {% csrf_token %}
+
+                <div class="mb-3">
+                  <label class="form-label">Nazwa użytkownika</label>
+                  {{ form.username }}
+                  {% if form.username.errors %}
+                    <div class="invalid-feedback d-block">{{ form.username.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">E-mail</label>
+                  {{ form.email }}
+                  {% if form.email.errors %}
+                    <div class="invalid-feedback d-block">{{ form.email.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Hasło</label>
+                  {{ form.password1 }}
+                  {% if form.password1.errors %}
+                    <div class="invalid-feedback d-block">{{ form.password1.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Powtórz hasło</label>
+                  {{ form.password2 }}
+                  {% if form.password2.errors %}
+                    <div class="invalid-feedback d-block">{{ form.password2.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="d-grid">
+                  <button type="submit" class="btn btn-primary btn-lg">Utwórz konto</button>
+                </div>
+              </form>
+
+              <hr class="my-3">
+              <div class="text-center small">
+                Masz już konto? <a href="{% url 'login' %}">Zaloguj się</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @media (max-width: 767px) {
+    .card .bg-primary { display: none !important; }
+  }
+</style>
+
+{% endblock %}

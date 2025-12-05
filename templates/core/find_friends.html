@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Szukaj znajomych{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="card shadow-sm p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="mb-0 text-primary"><i class="bi bi-search"></i> Szukaj znajomych</h2>
+      <a href="{% url 'znajomi' %}" class="btn btn-light btn-sm">Wróć</a>
+    </div>
+
+    <form method="get" class="mb-4">
+      <div class="input-group">
+        <input type="search" name="q" value="{{ query|default:'' }}" class="form-control" placeholder="Wpisz nazwę użytkownika lub imię...">
+        <button class="btn btn-primary" type="submit">Szukaj</button>
+      </div>
+    </form>
+
+    {% if suggestions %}
+      <div class="mb-3">
+        <h6 class="text-secondary mb-2">Proponowani znajomi</h6>
+        <div class="row g-2">
+          {% for s in suggestions %}
+            <div class="col-auto">
+              <div class="card p-2 border-0" style="width:140px;">
+                <div class="text-center">
+                  {% if s.avatar_url %}
+                    <img src="{{ s.avatar_url }}" class="rounded-circle mb-2" alt="{{ s.username }}" style="width:64px;height:64px;object-fit:cover;">
+                  {% else %}
+                    <div class="rounded-circle bg-secondary mb-2 d-inline-flex align-items-center justify-content-center" style="width:64px;height:64px;color:#fff;">{{ s.username|slice:":1"|upper }}</div>
+                  {% endif %}
+                  <div class="small fw-bold">{{ s.username }}</div>
+                  <div class="small text-muted">{{ s.full_name }}</div>
+                  <div class="mt-2">
+                    <a href="{% url 'profile' username=s.username %}" class="btn btn-sm btn-outline-primary">Profil</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if query and entries %}
+      <p class="small text-muted mb-3">Wyniki wyszukiwania dla: <strong>{{ query }}</strong></p>
+    {% elif query %}
+      <p class="small text-muted mb-3">Brak wyników dla: <strong>{{ query }}</strong></p>
+    {% endif %}
+
+    {% if entries %}
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+        {% for e in entries %}
+          <div class="col">
+            <div class="card h-100">
+              <div class="card-body text-center">
+                {% if e.avatar_url %}
+                  <img src="{{ e.avatar_url }}" class="rounded-circle mb-2" alt="{{ e.username }}" style="width:80px;height:80px;object-fit:cover;">
+                {% else %}
+                  <div class="rounded-circle bg-secondary mb-2 d-inline-flex align-items-center justify-content-center" style="width:80px;height:80px;color:#fff;font-size:1.25rem;">{{ e.username|slice:":1"|upper }}</div>
+                {% endif %}
+                <h5 class="card-title mb-1">{{ e.username }}</h5>
+                {% if e.full_name %}<div class="text-muted small mb-2">{{ e.full_name }}</div>{% endif %}
+                {% if e.bio %}<p class="small text-truncate">{{ e.bio }}</p>{% endif %}
+                <div class="d-grid gap-2">
+                  <a href="{% url 'profile' username=e.username %}" class="btn btn-sm btn-outline-primary">Zobacz profil</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center py-4">
+        <p class="mb-2">Nie znaleziono użytkowników.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

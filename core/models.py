@@ -135,3 +135,27 @@ class Friendship(models.Model):
 
     def __str__(self):
         return f"{self.user_a.username} <-> {self.user_b.username}"
+
+
+class Message(models.Model):
+    """Simple direct message between two users.
+
+    Messages are directional (sender -> recipient) and are stored with a timestamp.
+    Only friends should be allowed to exchange messages in the UI/views.
+    """
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='messages_sent', on_delete=models.CASCADE)
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='messages_received', on_delete=models.CASCADE)
+    content = models.TextField()
+    image = models.ImageField(upload_to='chat_images/', null=True, blank=True)
+    audio = models.FileField(upload_to='chat_audio/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['sender', 'recipient', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.sender.username} -> {self.recipient.username} @ {self.created_at.isoformat()}"

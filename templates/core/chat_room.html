@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="container py-3">
+  <div class="d-flex align-items-center mb-3">
+    <a class="me-3 btn btn-link" href="{% url 'chat_list' %}">&larr; Wróć do listy</a>
+    <h4 class="mb-0">Czat z {{ other.get_full_name|default:other.username }}</h4>
+  </div>
+
+  <div id="chat-box" class="border rounded p-3 mb-3" style="height:400px;overflow:auto;background:#f8f9fa;">
+    {% for m in messages %}
+      {% if m.sender == request.user %}
+        <div class="text-end mb-2" data-msg-id="{{ m.id }}">
+          <div class="d-inline-block bg-primary text-white rounded px-3 py-2">{{ m.content|linebreaksbr }}
+            {% if m.image %}
+              <div class="mt-2">
+                <img src="{{ m.image.url }}" alt="attachment" style="max-width:220px;display:block;border-radius:6px;" />
+              </div>
+            {% endif %}
+          </div>
+          <div class="small text-muted">{{ m.created_at }}</div>
+        </div>
+      {% else %}
+        <div class="text-start mb-2" data-msg-id="{{ m.id }}">
+          <div class="d-inline-block bg-light border rounded px-3 py-2">{{ m.content|linebreaksbr }}
+            {% if m.image %}
+              <div class="mt-2">
+                <img src="{{ m.image.url }}" alt="attachment" style="max-width:220px;display:block;border-radius:6px;" />
+              </div>
+            {% endif %}
+          </div>
+          <div class="small text-muted">{{ m.created_at }}</div>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <form id="chat-form">
+    <div class="input-group">
+      <textarea id="chat-input" class="form-control" rows="2" placeholder="Napisz wiadomość..."></textarea>
+      <input type="file" id="chat-image" accept="image/*" class="form-control" style="max-width:160px;" />
+      <button id="record-btn" type="button" class="btn btn-outline-secondary" title="Nagraj wiadomość głosową">
+        <i class="bi bi-mic-fill"></i>
+      </button>
+      <input type="hidden" id="recording-status" value="idle" />
+      <button class="btn btn-primary" type="submit">Wyślij</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  const other = '{{ other.username }}';
+  const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/)||[])[1];
+  const chatBox = document.getElementById('chat-box');
+  const input = document.getElementById('chat-input');
+  let lastId = 0;
+  // compute lastId from rendered messages
+  (function(){
+    const messages = chatBox.querySelectorAll('[data-msg-id]');
+    if(messages.length) lastId = parseInt(messages[messages.length-1].dataset.msgId,10)||0;
+  })();
+
+  function scrollToBottom(){ chatBox.scrollTop = chatBox.scrollHeight; }
+  scrollToBottom();
+
+  function fetchNew(){
+    const url = `/chat/${encodeURIComponent(other)}/fetch/?after_id=${lastId}`;
+    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+      .then(r=>r.json()).then(json=>{
+        if(json && json.success){
+          json.messages.forEach(m=>{
+            const div = document.createElement('div');
+            div.className = (m.sender === '{{ request.user.username }}') ? 'text-end mb-2' : 'text-start mb-2';
+            const bubble = document.createElement('div');
+            bubble.className = (m.sender === '{{ request.user.username }}') ? 'd-inline-block bg-primary text-white rounded px-3 py-2' : 'd-inline-block bg-light border rounded px-3 py-2';
+            bubble.innerHTML = m.content ? m.content.replace(/\n/g,'<br>') : '';
+            if(m.image_url){
+              const img = document.createElement('img');
+              img.src = m.image_url;
+              img.style.maxWidth = '220px';
+              img.style.display = 'block';
+              img.style.marginTop = '6px';
+              bubble.appendChild(img);
+            }
+            if(m.audio_url){
+              const audioEl = document.createElement('audio');
+              audioEl.controls = true;
+              audioEl.src = m.audio_url;
+              audioEl.style.display = 'block';
+              audioEl.style.marginTop = '6px';
+              audioEl.style.maxWidth = '220px';
+              bubble.appendChild(audioEl);
+            }
+            const ts = document.createElement('div');
+            ts.className = 'small text-muted';
+            ts.textContent = m.created_at;
+            div.appendChild(bubble);
+            div.appendChild(ts);
+            chatBox.appendChild(div);
+            lastId = Math.max(lastId, m.id);
+          });
+          if(json.messages.length) scrollToBottom();
+        }
+      }).catch(()=>{});
+  }
+
+  // polling
+  setInterval(fetchNew, 2000);
+
+  document.getElementById('chat-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    const content = input.value.trim();
+    const fileInput = document.getElementById('chat-image');
+    const file = fileInput.files && fileInput.files[0];
+    const url = `/chat/${encodeURIComponent(other)}/send/`;
+
+    // If there is an image or a recorded audio blob, use FormData
+    const audioBlob = window._chat_recording_blob || null;
+    if(file || audioBlob){
+      const fd = new FormData();
+      fd.append('content', content);
+      if(file) fd.append('image', file);
+      if(audioBlob) fd.append('audio', audioBlob, 'voice_message.webm');
+      fetch(url, {
+        method: 'POST',
+        headers: {'X-CSRFToken':csrftoken,'X-Requested-With':'XMLHttpRequest'},
+        body: fd
+      }).then(r=>r.json()).then(json=>{
+        if(json && json.success){
+          input.value = '';
+          fileInput.value = '';
+          // clear recording blob
+          window._chat_recording_blob = null;
+          document.getElementById('recording-status').value = 'idle';
+          document.getElementById('record-btn').classList.remove('btn-danger');
+          fetchNew();
+        } else {
+          alert(json && json.error ? json.error : 'Błąd wysyłania');
+        }
+      }).catch(()=>{ alert('Błąd sieci'); });
+      return;
+    }
+
+    if(!content) return;
+    fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':csrftoken,'X-Requested-With':'XMLHttpRequest'},
+      body: JSON.stringify({content: content})
+    }).then(r=>r.json()).then(json=>{
+      if(json && json.success){
+        input.value = '';
+        fetchNew();
+      } else {
+        alert(json && json.error ? json.error : 'Błąd wysyłania');
+      }
+    }).catch(()=>{ alert('Błąd sieci'); });
+  });
+  
+  // Recording logic (MediaRecorder)
+  (function(){
+    const recordBtn = document.getElementById('record-btn');
+    const statusInput = document.getElementById('recording-status');
+    let recorder = null;
+    let chunks = [];
+
+    function startRecording(){
+      if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Twoja przeglądarka nie wspiera nagrywania głosu.');
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream=>{
+        recorder = new MediaRecorder(stream);
+        chunks = [];
+        recorder.ondataavailable = (e)=>{ if(e.data && e.data.size) chunks.push(e.data); };
+        recorder.onstop = ()=>{
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          window._chat_recording_blob = blob;
+          statusInput.value = 'ready';
+          recordBtn.classList.remove('btn-danger');
+          recordBtn.classList.add('btn-success');
+        };
+        recorder.start();
+        statusInput.value = 'recording';
+        recordBtn.classList.add('btn-danger');
+      }).catch(()=>{ alert('Brak dostępu do mikrofonu.'); });
+    }
+
+    function stopRecording(){
+      if(recorder && recorder.state === 'recording'){
+        recorder.stop();
+        // stop tracks
+        try{ recorder.stream.getTracks().forEach(t=>t.stop()); } catch(e){}
+      }
+    }
+
+    recordBtn.addEventListener('click', function(){
+      if(statusInput.value === 'idle'){
+        startRecording();
+      } else if(statusInput.value === 'recording'){
+        stopRecording();
+      } else if(statusInput.value === 'ready'){
+        // clear recorded blob
+        window._chat_recording_blob = null;
+        statusInput.value = 'idle';
+        recordBtn.classList.remove('btn-success');
+      }
+    });
+  })();
+})();
+</script>
+
+{% endblock %}

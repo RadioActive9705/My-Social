@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Prośby o znajomość{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="card shadow-sm p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="mb-0 text-primary"><i class="bi bi-list-check"></i> Prośby o znajomość</h2>
+      <div>
+        <a href="{% url 'znajomi' %}" class="btn btn-light btn-sm">Wróć</a>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-12 col-md-6">
+        <h5 class="text-secondary">Przychodzące</h5>
+        {% if incoming %}
+          <div class="list-group">
+            {% for r in incoming %}
+              <div class="list-group-item d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                  {% if r.avatar_url %}
+                    <img src="{{ r.avatar_url }}" class="rounded-circle" style="width:48px;height:48px;object-fit:cover;">
+                  {% else %}
+                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width:48px;height:48px">{{ r.username|slice:":1"|upper }}</div>
+                  {% endif %}
+                  <div>
+                    <div class="fw-bold">{{ r.username }}</div>
+                    <div class="small text-muted">{{ r.full_name }}</div>
+                  </div>
+                </div>
+                <div>
+                  <button class="btn btn-sm btn-primary accept-btn" data-fr-id="{{ r.id }}">Akceptuj</button>
+                  <button class="btn btn-sm btn-outline-secondary decline-btn" data-fr-id="{{ r.id }}">Odrzuć</button>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-muted">Brak przychodzących próśb.</div>
+        {% endif %}
+      </div>
+
+      <div class="col-12 col-md-6">
+        <h5 class="text-secondary">Wychodzące</h5>
+        {% if outgoing %}
+          <div class="list-group">
+            {% for r in outgoing %}
+              <div class="list-group-item d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                  {% if r.avatar_url %}
+                    <img src="{{ r.avatar_url }}" class="rounded-circle" style="width:48px;height:48px;object-fit:cover;">
+                  {% else %}
+                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width:48px;height:48px">{{ r.username|slice:":1"|upper }}</div>
+                  {% endif %}
+                  <div>
+                    <div class="fw-bold">{{ r.username }}</div>
+                    <div class="small text-muted">{{ r.full_name }}</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="small text-muted">{{ r.status }}</div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-muted">Brak wysłanych próśb.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // reuse accept/decline AJAX handlers from znajomi template
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+  function postAction(url, onSuccess) {
+    fetch(url, { method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrftoken, 'X-Requested-With': 'XMLHttpRequest'} })
+      .then(r => r.json())
+      .then(data => { if (data && data.success) onSuccess(data); else alert('Błąd: ' + (data && data.error ? data.error : JSON.stringify(data))); })
+      .catch(err => { console.error(err); alert('Request failed'); });
+  }
+
+  document.querySelectorAll('.accept-btn').forEach(btn => {
+    btn.addEventListener('click', function(){
+      const fr = this.dataset.frId;
+      if (!fr) return;
+      const url = `{% url 'accept_friend_request' fr_id=0 %}`.replace('/0/', '/' + fr + '/');
+      postAction(url, function(data){ location.reload(); });
+    });
+  });
+
+  document.querySelectorAll('.decline-btn').forEach(btn => {
+    btn.addEventListener('click', function(){
+      const fr = this.dataset.frId;
+      if (!fr) return;
+      const url = `{% url 'decline_friend_request' fr_id=0 %}`.replace('/0/', '/' + fr + '/');
+      postAction(url, function(data){ location.reload(); });
+    });
+  });
+})();
+</script>
+
+{% endblock %}

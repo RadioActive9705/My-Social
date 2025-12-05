@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Stan relacji z użytkownikami</h2>
+    <a class="btn btn-outline-secondary" href="{% url 'find_friends' %}">Szukaj znajomych</a>
+  </div>
+
+  <div class="row g-3">
+    {% for e in entries %}
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body d-flex">
+          <div class="me-3">
+            {% if e.user.profile.avatar %}
+            <img src="{{ e.user.profile.avatar.url }}" alt="avatar" class="rounded" style="width:64px;height:64px;object-fit:cover;" />
+            {% else %}
+            <div class="bg-secondary text-white rounded d-flex align-items-center justify-content-center" style="width:64px;height:64px;">{{ e.user.username|slice:":1"|upper }}</div>
+            {% endif %}
+          </div>
+          <div class="flex-grow-1">
+            <h5 class="card-title mb-1">{{ e.user.get_full_name|default:e.user.username }}</h5>
+            <p class="card-text text-muted mb-2">@{{ e.user.username }}</p>
+            <div>
+              {% if e.status == 'friends' %}
+                <span class="badge bg-success">Potwierdzeni znajomi</span>
+                <button class="btn btn-sm btn-outline-danger ms-2 action-unfriend" data-username="{{ e.user.username }}">Usuń znajomego</button>
+              {% elif e.status == 'pending_sent' %}
+                <span class="badge bg-warning text-dark">Zaproszenie wysłane</span>
+                <button class="btn btn-sm btn-outline-secondary ms-2 action-cancel" data-fr-id="{{ e.fr_id }}">Anuluj</button>
+              {% elif e.status == 'pending_received' %}
+                <span class="badge bg-info text-dark">Otrzymane zaproszenie</span>
+                <button class="btn btn-sm btn-success ms-2 action-accept" data-fr-id="{{ e.fr_id }}">Akceptuj</button>
+                <button class="btn btn-sm btn-outline-danger ms-2 action-decline" data-fr-id="{{ e.fr_id }}">Odrzuć</button>
+              {% elif e.status == 'not_friends' %}
+                <span class="badge bg-secondary">Brak relacji</span>
+                <button class="btn btn-sm btn-primary ms-2 action-send" data-username="{{ e.user.username }}">Wyślij zaproszenie</button>
+              {% else %}
+                <span class="badge bg-secondary">Nieznany</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+(function(){
+  const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/)||[])[1];
+  function postJson(url, data){
+    return fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken,
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: data? JSON.stringify(data): undefined
+    }).then(r=>r.json());
+  }
+
+  // send friend request
+  document.querySelectorAll('.action-send').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const username = btn.dataset.username;
+      btn.disabled = true;
+      postJson('/send_friend_request/' + encodeURIComponent(username) + '/', null).then(resp=>{
+        if(resp && resp.success){
+          btn.closest('.card-body').querySelector('.badge').className = 'badge bg-warning text-dark';
+          btn.textContent = 'Anuluj';
+          btn.className = 'btn btn-sm btn-outline-secondary ms-2 action-cancel';
+          if(resp.fr_id) btn.setAttribute('data-fr-id', resp.fr_id);
+        } else {
+          alert((resp && resp.error) || (resp && resp.message) || 'Błąd');
+          btn.disabled = false;
+        }
+      }).catch(()=>{ alert('Błąd sieci'); btn.disabled = false; });
+    });
+  });
+
+  // cancel outgoing
+  document.addEventListener('click', function(e){
+    if(e.target.matches('.action-cancel')){
+      const frId = e.target.dataset.frId;
+      const btn = e.target;
+      btn.disabled = true;
+      postJson('/friend_request/cancel/' + frId + '/', null).then(resp=>{
+        if(resp && resp.success){
+          const badge = btn.closest('.card-body').querySelector('.badge');
+          badge.className = 'badge bg-secondary';
+          badge.textContent = 'Brak relacji';
+          btn.textContent = 'Wyślij zaproszenie';
+          btn.className = 'btn btn-sm btn-primary ms-2 action-send';
+          btn.removeAttribute('data-fr-id');
+        } else {
+          alert((resp && resp.error) || 'Błąd');
+          btn.disabled = false;
+        }
+      }).catch(()=>{ alert('Błąd sieci'); btn.disabled = false; });
+    }
+  }, false);
+
+  // accept
+  document.addEventListener('click', function(e){
+    if(e.target.matches('.action-accept')){
+      const frId = e.target.dataset.frId;
+      const btn = e.target;
+      btn.disabled = true;
+      postJson('/friend_request/accept/' + frId + '/', null).then(resp=>{
+        if(resp && resp.success){
+          const parent = btn.closest('.card-body');
+          parent.querySelector('.badge').className = 'badge bg-success';
+          parent.querySelector('.badge').textContent = 'Potwierdzeni znajomi';
+          // replace buttons
+          parent.querySelectorAll('.action-accept, .action-decline').forEach(n=>n.remove());
+          const unfriendBtn = document.createElement('button');
+          unfriendBtn.className = 'btn btn-sm btn-outline-danger ms-2 action-unfriend';
+          unfriendBtn.dataset.username = resp.friend.username;
+          unfriendBtn.textContent = 'Usuń znajomego';
+          parent.appendChild(unfriendBtn);
+        } else {
+          alert((resp && resp.error) || 'Błąd');
+          btn.disabled = false;
+        }
+      }).catch(()=>{ alert('Błąd sieci'); btn.disabled = false; });
+    }
+  }, false);
+
+  // decline
+  document.addEventListener('click', function(e){
+    if(e.target.matches('.action-decline')){
+      const frId = e.target.dataset.frId;
+      const btn = e.target;
+      btn.disabled = true;
+      postJson('/friend_request/decline/' + frId + '/', null).then(resp=>{
+        if(resp && resp.success){
+          const parent = btn.closest('.card-body');
+          parent.querySelector('.badge').className = 'badge bg-secondary';
+          parent.querySelector('.badge').textContent = 'Brak relacji';
+          parent.querySelectorAll('.action-accept, .action-decline').forEach(n=>n.remove());
+          const sendBtn = document.createElement('button');
+          sendBtn.className = 'btn btn-sm btn-primary ms-2 action-send';
+          sendBtn.dataset.username = parent.querySelector('p.card-text').textContent.replace('@','').trim();
+          sendBtn.textContent = 'Wyślij zaproszenie';
+          parent.appendChild(sendBtn);
+        } else {
+          alert((resp && resp.error) || 'Błąd');
+          btn.disabled = false;
+        }
+      }).catch(()=>{ alert('Błąd sieci'); btn.disabled = false; });
+    }
+  }, false);
+
+  // unfriend
+  document.addEventListener('click', function(e){
+    if(e.target.matches('.action-unfriend')){
+      const username = e.target.dataset.username;
+      const btn = e.target;
+      if(!confirm('Na pewno usunąć znajomego?')) return;
+      btn.disabled = true;
+      postJson('/unfriend/' + encodeURIComponent(username) + '/', null).then(resp=>{
+        if(resp && resp.success){
+          const parent = btn.closest('.card-body');
+          parent.querySelector('.badge').className = 'badge bg-secondary';
+          parent.querySelector('.badge').textContent = 'Brak relacji';
+          btn.textContent = 'Wyślij zaproszenie';
+          btn.className = 'btn btn-sm btn-primary ms-2 action-send';
+          btn.removeAttribute('data-username');
+        } else {
+          alert((resp && resp.error) || 'Błąd');
+          btn.disabled = false;
+        }
+      }).catch(()=>{ alert('Błąd sieci'); btn.disabled = false; });
+    }
+  }, false);
+
+})();
+</script>
+
+{% endblock %}
