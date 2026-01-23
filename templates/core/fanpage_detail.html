@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ fanpage.name }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h3>{{ fanpage.name }}</h3>
+      <p class="text-muted">Właściciel: {{ fanpage.owner.username }} • {{ fanpage.created_at|date:'Y-m-d' }}</p>
+      <p>{{ fanpage.description|default:'(brak opisu)' }}</p>
+      <div class="mb-3">
+        {% if is_following %}
+          <form method="post" action="{% url 'fanpage_unfollow' fanpage.id %}">{% csrf_token %}<button class="btn btn-outline-danger">Przestań obserwować</button></form>
+        {% else %}
+          <form method="post" action="{% url 'fanpage_follow' fanpage.id %}">{% csrf_token %}<button class="btn btn-primary">Obserwuj</button></form>
+        {% endif %}
+      </div>
+      <h5>Obserwujący ({{ fanpage.followers.count }})</h5>
+      <ul class="list-group">
+        {% for u in fanpage.followers.all %}
+          <li class="list-group-item">{{ u.username }}</li>
+        {% empty %}
+          <li class="list-group-item">Brak obserwujących.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

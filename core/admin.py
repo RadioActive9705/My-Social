@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Profile, Post, FriendRequest, Friendship, Message
+from .models import CustomUser, Profile, Post, FriendRequest, Friendship, Message, Group, GroupMembership, GroupMessage
 from django.conf import settings
 from django.contrib import messages
 from django.shortcuts import redirect
@@ -44,6 +44,24 @@ class MessageAdmin(admin.ModelAdmin):
     fields = ('sender', 'recipient', 'content', 'image', 'audio', 'read', 'created_at')
     search_fields = ('sender__username', 'recipient__username', 'content')
     list_filter = ('read',)
+
+
+@admin.register(Group)
+class GroupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'owner', 'created_at')
+    search_fields = ('name', 'owner__username')
+
+
+@admin.register(GroupMembership)
+class GroupMembershipAdmin(admin.ModelAdmin):
+    list_display = ('group', 'user', 'role', 'joined_at')
+    search_fields = ('group__name', 'user__username')
+
+
+@admin.register(GroupMessage)
+class GroupMessageAdmin(admin.ModelAdmin):
+    list_display = ('group', 'sender', 'created_at')
+    search_fields = ('group__name', 'sender__username', 'content')
 
 
 @admin.register(User)

@@ -38,7 +38,28 @@
         <div class="mb-3">
           <h6 class="text-secondary">Ustawienia prywatności</h6>
           {% if profile.privacy_settings %}
-            <pre class="small bg-light p-2 rounded">{{ profile.privacy_settings }}</pre>
+            {% comment %}Support either dict with key 'level' or plain string storage{% endcomment %}
+            {% if profile.privacy_settings.level %}
+              {% if profile.privacy_settings.level == 'public' %}
+                <div>Publiczne (wszyscy widzą)</div>
+              {% elif profile.privacy_settings.level == 'friends' %}
+                <div>Tylko znajomi</div>
+              {% elif profile.privacy_settings.level == 'private' %}
+                <div>Tylko ja</div>
+              {% else %}
+                <div class="small text-muted">{{ profile.privacy_settings }}</div>
+              {% endif %}
+            {% else %}
+              {% if profile.privacy_settings == 'public' %}
+                <div>Publiczne (wszyscy widzą)</div>
+              {% elif profile.privacy_settings == 'friends' %}
+                <div>Tylko znajomi</div>
+              {% elif profile.privacy_settings == 'private' %}
+                <div>Tylko ja</div>
+              {% else %}
+                <pre class="small bg-light p-2 rounded">{{ profile.privacy_settings }}</pre>
+              {% endif %}
+            {% endif %}
           {% else %}
             <div class="text-muted">Brak ustawień prywatności.</div>
           {% endif %}

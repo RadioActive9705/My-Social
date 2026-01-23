@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Moje grupy{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-3">Moje grupy</h2>
+  <div class="list-group">
+    {% for g in groups %}
+      <a class="list-group-item list-group-item-action" href="{% url 'group_detail' g.id %}">
+        <div class="d-flex w-100 justify-content-between">
+          <h5 class="mb-1">{{ g.name }}</h5>
+          <small class="text-muted">{{ g.created_at|date:"Y-m-d" }}</small>
+        </div>
+        <p class="mb-1">{{ g.description|default:'(brak opisu)' }}</p>
+        <small>Właściciel: {{ g.owner.username }}</small>
+        <div class="mt-2">
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'group_edit' g.id %}">Edytuj</a>
+        </div>
+      </a>
+    {% empty %}
+      <div class="list-group-item">Nie należysz do żadnych grup.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

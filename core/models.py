@@ -17,9 +17,48 @@ class Profile(models.Model):
     avatar = models.ImageField(upload_to='avatars/',
                                null=True, blank=True)
     privacy_settings = models.JSONField(default=dict)
+    phone_number = models.CharField(max_length=32, blank=True, null=True)
 
     def __str__(self):
         return self.user.username
+
+    def is_visible_to(self, viewer):
+        """Return True if this profile's content (posts/photos) should be visible to `viewer`.
+
+        viewer may be an AnonymousUser or a User instance.
+        Visibility levels:
+        - 'public'  : everyone
+        - 'friends' : only friends
+        - 'private' : only owner
+        """
+        try:
+            level = None
+            ps = self.privacy_settings
+            if isinstance(ps, dict):
+                level = ps.get('level')
+            elif isinstance(ps, str):
+                level = ps
+            if not level:
+                level = 'public'
+        except Exception:
+            level = 'public'
+
+        # owner always sees their own profile
+        if viewer and getattr(viewer, 'is_authenticated', False) and viewer == self.user:
+            return True
+
+        if level == 'public':
+            return True
+        if level == 'friends':
+            # anonymous or unauthenticated users are not friends
+            if not getattr(viewer, 'is_authenticated', False):
+                return False
+            try:
+                return Friendship.are_friends(viewer, self.user)
+            except Exception:
+                return False
+        # private
+        return False
 
     def save(self, *args, **kwargs):
         # Call parent save first to ensure we have a file path
@@ -159,3 +198,78 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.sender.username} -> {self.recipient.username} @ {self.created_at.isoformat()}"
+
+
+class Group(models.Model):
+    """A user-created group containing multiple members."""
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='owned_groups', on_delete=models.CASCADE)
+    members = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='GroupMembership',
+        related_name='groups_joined',
+        related_query_name='groups_joined',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.owner.username})"
+
+
+class GroupMembership(models.Model):
+    """Membership record for a user in a group."""
+    ROLE_MEMBER = 'member'
+    ROLE_ADMIN = 'admin'
+    ROLE_CHOICES = [
+        (ROLE_MEMBER, 'Member'),
+        (ROLE_ADMIN, 'Admin'),
+    ]
+
+    group = models.ForeignKey(Group, related_name='memberships', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='group_memberships', on_delete=models.CASCADE)
+    role = models.CharField(max_length=16, choices=ROLE_CHOICES, default=ROLE_MEMBER)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = (('group', 'user'),)
+
+    def __str__(self):
+        return f"{self.user.username} in {self.group.name} ({self.role})"
+
+
+class GroupMessage(models.Model):
+    """A message sent to a group."""
+    group = models.ForeignKey(Group, related_name='messages', on_delete=models.CASCADE)
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='group_messages_sent', on_delete=models.CASCADE)
+    content = models.TextField(blank=True)
+    image = models.ImageField(upload_to='chat_images/', null=True, blank=True)
+    audio = models.FileField(upload_to='chat_audio/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['group', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.sender.username} -> #{self.group.name} @ {self.created_at.isoformat()}"
+
+
+class FanPage(models.Model):
+    """A simple fanpage owned by a user that others can follow."""
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='owned_fanpages', on_delete=models.CASCADE)
+    followers = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='followed_fanpages', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"FanPage: {self.name} ({self.owner.username})"

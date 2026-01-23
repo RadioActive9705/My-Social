@@ -1,5 +1,7 @@
 from django.urls import path
+from django.urls import reverse_lazy
 from django.contrib.auth import views as auth_views
+from .forms import UsernameOrEmailPasswordResetForm
 from .views import post_list, register, profile_view,my_profile_redirect
 from .views import CustomLoginView
 from . import views
@@ -39,6 +41,36 @@ urlpatterns = [
     path('notifications/friend_requests_count/', views.friend_requests_count, name='friend_requests_count'),
     path('ustawienia/', views.ustawienia_view, name='ustawienia'),
     path('debug/avatar/', views.avatar_debug, name='avatar_debug'),
+    path('groups/', views.group_list, name='group_list'),
+    path('groups/create/', views.group_create, name='group_create'),
+    path('groups/friends/json/', views.my_friends_json, name='my_friends_json'),
+    path('groups/<int:pk>/edit/', views.group_edit, name='group_edit'),
+    path('groups/<int:pk>/', views.group_detail, name='group_detail'),
+    path('groups/<int:pk>/send/', views.group_send_message, name='group_send_message'),
+    path('groups/<int:pk>/fetch/', views.group_fetch_messages, name='group_fetch_messages'),
+    path('groups/<int:pk>/promote/<int:user_id>/', views.group_promote, name='group_promote'),
+    path('groups/<int:pk>/demote/<int:user_id>/', views.group_demote, name='group_demote'),
+    path('fanpages/create/', views.fanpage_create, name='fanpage_create'),
+    path('fanpages/<int:pk>/', views.fanpage_detail, name='fanpage_detail'),
+    path('fanpages/<int:pk>/follow/', views.fanpage_follow, name='fanpage_follow'),
+    path('fanpages/<int:pk>/unfollow/', views.fanpage_unfollow, name='fanpage_unfollow'),
+    # Password reset flow
+    path('password_reset/', auth_views.PasswordResetView.as_view(
+        template_name='core/password_reset_form.html',
+        email_template_name='core/password_reset_email.html',
+        success_url=reverse_lazy('password_reset_done'),
+        form_class=UsernameOrEmailPasswordResetForm,
+    ), name='password_reset'),
+    path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(
+        template_name='core/password_reset_done.html'
+    ), name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
+        template_name='core/password_reset_confirm.html',
+        success_url=reverse_lazy('password_reset_complete')
+    ), name='password_reset_confirm'),
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(
+        template_name='core/password_reset_complete.html'
+    ), name='password_reset_complete'),
 ]
 
 if settings.DEBUG:

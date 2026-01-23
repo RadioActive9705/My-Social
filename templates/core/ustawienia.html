@@ -6,6 +6,17 @@
     <h2 class="mb-4 text-primary"><i class="bi bi-gear-fill"></i> Ustawienia konta</h2>
     <p>Tu możesz zarządzać ustawieniami swojego konta, prywatnością i powiadomieniami.</p>
 
+    {% if user.is_authenticated %}
+      <div class="mb-3">
+        <a href="{% url 'group_create' %}" class="btn btn-success me-2"><i class="bi bi-people-fill"></i> Utwórz czat grupowy</a>
+        <a href="{% url 'group_list' %}" class="btn btn-outline-secondary">Moje grupy</a>
+      </div>
+    {% else %}
+      <div class="mb-3">
+        <a href="{% url 'login' %}?next={% url 'group_create' %}" class="btn btn-primary">Zaloguj, aby utworzyć czat grupowy</a>
+      </div>
+    {% endif %}
+
     <div class="row g-4">
       <div class="col-12 col-md-4">
         <div class="card h-100 border-0 shadow-sm mb-4">
@@ -126,6 +137,20 @@
             {% if email_changed %}
               <div class="alert alert-success mt-3">E-mail został zmieniony.</div>
             {% endif %}
+            <hr>
+            <div>
+              <h5 class="mb-3 text-primary"><i class="bi bi-telephone-fill"></i> Numer telefonu</h5>
+              <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label for="new_phone" class="form-label">Numer telefonu</label>
+                  <input type="text" class="form-control" id="new_phone" name="new_phone" placeholder="+48 123 456 789" value="{{ profile.phone_number|default:'' }}">
+                </div>
+            </div>
+            <div class="mt-auto d-grid mb-2">
+              <button type="submit" name="change_phone" class="btn btn-outline-primary">Zapisz numer telefonu</button>
+            </div>
+              </form>
           </div>
         </div>
       </div>

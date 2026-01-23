@@ -13,11 +13,12 @@ from django.contrib import messages
 from django.http import JsonResponse
 import traceback
 
-from .models import Post, Profile
+from .models import Post, Profile, Message, Group, GroupMembership, GroupMessage, Friendship
+from .models import FanPage
 from django.db.models import Q
-from .forms import RegistationForm, ProfileForm, PostForm
-from .models import Message
+from .forms import RegistationForm, ProfileForm, PostForm, UsernameOrEmailAuthenticationForm, GroupCreateForm, GroupEditForm
 from django.conf import settings
+from django.views.decorators.http import require_POST
 
 # Pobierz model użytkownika, który jest aktualnie aktywny w projekcie
 User = get_user_model()
@@ -43,6 +44,16 @@ def ustawienia_view(request):
             request.user.save()
             email_changed = True
             messages.success(request, 'E-mail został zmieniony.')
+
+    if request.method == 'POST' and 'change_phone' in request.POST:
+        new_phone = request.POST.get('new_phone')
+        if new_phone is not None:
+            try:
+                profile.phone_number = new_phone.strip() if new_phone.strip() else None
+                profile.save()
+                messages.success(request, 'Numer telefonu został zmieniony.')
+            except Exception as e:
+                messages.error(request, 'Nie udało się zapisać numeru telefonu.')
 
     if request.method == 'POST' and 'change_avatar' in request.POST:
         print('DEBUG: ustawienia_view POST keys:', list(request.POST.keys()))
@@ -128,6 +139,7 @@ def logout_view(request):
 
 class CustomLoginView(LoginView):
     template_name = 'core/login.html'
+    authentication_form = UsernameOrEmailAuthenticationForm
 
     def get_success_url(self):
         next_url = self.request.GET.get('next') or self.request.POST.get('next')
@@ -198,6 +210,32 @@ def profile_view(request, username):
         'avatar_changed': avatar_changed,
         'avatar_url': avatar_url,
     }
+    # Determine whether to show posts/photos to the current viewer
+    try:
+        can_view = profile.is_visible_to(request.user)
+    except Exception:
+        can_view = True
+
+    posts = []
+    if can_view:
+        qs = Post.objects.filter(author=user).order_by('-created_at')
+        posts = []
+        for p in qs:
+            image_url = None
+            if p.image:
+                try:
+                    mtime = int(os.path.getmtime(p.image.path))
+                except Exception:
+                    mtime = int(time.time())
+                image_url = f"{p.image.url}?v={mtime}"
+            posts.append({
+                'id': p.id,
+                'content': p.content,
+                'created_at': p.created_at,
+                'image_url': image_url,
+            })
+
+    context.update({'can_view_profile': can_view, 'posts': posts})
     return render(request, 'core/Profile.html', context)
 
 
@@ -285,6 +323,226 @@ def znajomi_view(request):
             })
 
     return render(request, 'core/znajomi.html', {'friends': friends, 'incoming': incoming})
+
+
+@login_required
+def group_list(request):
+    """List groups the user is a member of or owns."""
+    groups = Group.objects.filter(memberships__user=request.user).select_related('owner').distinct()
+    return render(request, 'core/group_list.html', {'groups': groups})
+
+
+@login_required
+def fanpage_create(request):
+    from .forms import FanPageForm
+    if request.method == 'POST':
+        form = FanPageForm(request.POST)
+        if form.is_valid():
+            fp = form.save(commit=False)
+            fp.owner = request.user
+            fp.save()
+            # owner follows their own fanpage
+            fp.followers.add(request.user)
+            messages.success(request, 'Fanpage został utworzony.')
+            return redirect('profile', username=request.user.username)
+    else:
+        form = FanPageForm()
+    return render(request, 'core/fanpage_create.html', {'form': form})
+
+
+@login_required
+def fanpage_detail(request, pk):
+    fp = get_object_or_404(FanPage, pk=pk)
+    is_following = fp.followers.filter(id=request.user.id).exists()
+    return render(request, 'core/fanpage_detail.html', {'fanpage': fp, 'is_following': is_following})
+
+
+@login_required
+def fanpage_follow(request, pk):
+    fp = get_object_or_404(FanPage, pk=pk)
+    fp.followers.add(request.user)
+    messages.success(request, f'Obserwujesz fanpage {fp.name}.')
+    return redirect('fanpage_detail', pk=pk)
+
+
+@login_required
+def fanpage_unfollow(request, pk):
+    fp = get_object_or_404(FanPage, pk=pk)
+    fp.followers.remove(request.user)
+    messages.info(request, f'Przestałeś obserwować {fp.name}.')
+    return redirect('fanpage_detail', pk=pk)
+
+
+@login_required
+def group_create(request):
+    if request.method == 'POST':
+        form = GroupCreateForm(request.POST, user=request.user)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            description = form.cleaned_data.get('description', '')
+            members = form.cleaned_data.get('members') or []
+            grp = Group.objects.create(name=name, description=description, owner=request.user)
+            # Add owner as admin
+            GroupMembership.objects.create(group=grp, user=request.user, role=GroupMembership.ROLE_ADMIN)
+            # Add selected members as normal members
+            for u in members:
+                try:
+                    if u.id != request.user.id:
+                        GroupMembership.objects.create(group=grp, user=u, role=GroupMembership.ROLE_MEMBER)
+                except Exception:
+                    pass
+            messages.success(request, 'Grupa została utworzona.')
+            return redirect('group_list')
+    else:
+        form = GroupCreateForm(user=request.user)
+    return render(request, 'core/group_create.html', {'form': form})
+
+
+@login_required
+def group_edit(request, pk):
+    grp = get_object_or_404(Group, pk=pk)
+    # only owner or admins can edit
+    is_admin = (grp.owner_id == request.user.id) or GroupMembership.objects.filter(group=grp, user=request.user, role=GroupMembership.ROLE_ADMIN).exists()
+    if not is_admin:
+        messages.error(request, 'Brak uprawnień do edycji tej grupy.')
+        return redirect('group_list')
+
+    if request.method == 'POST':
+        form = GroupEditForm(request.POST, user=request.user, group=grp, instance=grp)
+        if form.is_valid():
+            form.save()
+            # update memberships: keep owner, sync others to selected list
+            selected = list(form.cleaned_data.get('members') or [])
+            # remove members not selected (excluding owner)
+            current_qs = GroupMembership.objects.filter(group=grp).exclude(user=grp.owner)
+            current_users = {m.user_id for m in current_qs}
+            selected_ids = {u.id for u in selected}
+            # delete memberships for users removed
+            for m in current_qs:
+                if m.user_id not in selected_ids:
+                    m.delete()
+            # add new memberships
+            for u in selected:
+                if u.id not in current_users and u.id != grp.owner_id:
+                    GroupMembership.objects.create(group=grp, user=u, role=GroupMembership.ROLE_MEMBER)
+            messages.success(request, 'Grupa została zaktualizowana.')
+            return redirect('group_list')
+    else:
+        form = GroupEditForm(user=request.user, group=grp, instance=grp)
+    return render(request, 'core/group_edit.html', {'form': form, 'group': grp})
+
+
+@login_required
+def group_detail(request, pk):
+    grp = get_object_or_404(Group, pk=pk)
+    # check membership
+    is_member = GroupMembership.objects.filter(group=grp, user=request.user).exists()
+    if not is_member:
+        messages.error(request, 'Nie jesteś członkiem tej grupy.')
+        return redirect('group_list')
+
+    is_owner = (grp.owner_id == request.user.id)
+    is_admin = is_owner or GroupMembership.objects.filter(group=grp, user=request.user, role=GroupMembership.ROLE_ADMIN).exists()
+
+    msgs_qs = GroupMessage.objects.filter(group=grp).select_related('sender').order_by('created_at')
+    messages_list = []
+    for m in msgs_qs:
+        messages_list.append({'id': m.id, 'sender': m.sender.username, 'content': m.content, 'created_at': m.created_at, 'image_url': getattr(m.image, 'url', None)})
+
+    members = GroupMembership.objects.filter(group=grp).select_related('user')
+
+    return render(request, 'core/group_detail.html', {
+        'group': grp,
+        'messages': messages_list,
+        'memberships': members,
+        'is_owner': is_owner,
+        'is_admin': is_admin,
+    })
+
+
+@login_required
+@require_POST
+def group_send_message(request, pk):
+    grp = get_object_or_404(Group, pk=pk)
+    if not GroupMembership.objects.filter(group=grp, user=request.user).exists():
+        return JsonResponse({'success': False, 'error': 'Not a member'}, status=403)
+    content = request.POST.get('content', '').strip()
+    if not content and not request.FILES.get('image') and not request.FILES.get('audio'):
+        return JsonResponse({'success': False, 'error': 'Empty message'}, status=400)
+    gm = GroupMessage.objects.create(group=grp, sender=request.user, content=content, image=request.FILES.get('image'), audio=request.FILES.get('audio'))
+    return JsonResponse({'success': True, 'id': gm.id, 'sender': gm.sender.username, 'content': gm.content, 'created_at': gm.created_at.isoformat()})
+
+
+@login_required
+def group_fetch_messages(request, pk):
+    grp = get_object_or_404(Group, pk=pk)
+    if not GroupMembership.objects.filter(group=grp, user=request.user).exists():
+        return JsonResponse({'success': False, 'error': 'Not a member'}, status=403)
+    after = request.GET.get('after')
+    qs = GroupMessage.objects.filter(group=grp).select_related('sender').order_by('created_at')
+    if after:
+        try:
+            from django.utils.dateparse import parse_datetime
+            dt = parse_datetime(after)
+            if dt:
+                qs = qs.filter(created_at__gt=dt)
+        except Exception:
+            pass
+    data = []
+    for m in qs:
+        data.append({'id': m.id, 'sender': m.sender.username, 'content': m.content, 'created_at': m.created_at.isoformat()})
+    return JsonResponse({'success': True, 'messages': data})
+
+
+@login_required
+@require_POST
+def group_promote(request, pk, user_id):
+    grp = get_object_or_404(Group, pk=pk)
+    # only owner can change roles
+    if grp.owner_id != request.user.id:
+        messages.error(request, 'Brak uprawnień.')
+        return redirect('group_detail', pk=pk)
+    membership = get_object_or_404(GroupMembership, group=grp, user_id=user_id)
+    membership.role = GroupMembership.ROLE_ADMIN
+    membership.save(update_fields=['role'])
+    messages.success(request, 'Użytkownik został promowany na admina.')
+    return redirect('group_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def group_demote(request, pk, user_id):
+    grp = get_object_or_404(Group, pk=pk)
+    if grp.owner_id != request.user.id:
+        messages.error(request, 'Brak uprawnień.')
+        return redirect('group_detail', pk=pk)
+    membership = get_object_or_404(GroupMembership, group=grp, user_id=user_id)
+    # Prevent owner demote
+    if membership.user_id == grp.owner_id:
+        messages.error(request, 'Nie można zdegradować właściciela.')
+        return redirect('group_detail', pk=pk)
+    membership.role = GroupMembership.ROLE_MEMBER
+    membership.save(update_fields=['role'])
+    messages.success(request, 'Użytkownik został zdegradowany.')
+    return redirect('group_detail', pk=pk)
+
+
+@login_required
+def my_friends_json(request):
+    """Return a JSON list of the current user's friends (id, username, full_name)."""
+    try:
+        fq = Friendship.objects.filter(Q(user_a=request.user) | Q(user_b=request.user)).values_list('user_a', 'user_b')
+        friend_ids = set()
+        for a, b in fq:
+            if a == request.user.id:
+                friend_ids.add(b)
+            elif b == request.user.id:
+                friend_ids.add(a)
+        users = User.objects.filter(id__in=friend_ids)
+        data = [{'id': u.id, 'username': u.username, 'full_name': f"{u.first_name} {u.last_name}".strip()} for u in users]
+    except Exception:
+        data = []
+    return JsonResponse({'success': True, 'friends': data})
 
 
 @login_required
@@ -661,7 +919,8 @@ def register(request):
         # Sugeruję zmianę nazwy 'RegistationForm' na 'RegistrationForm' w forms.py
         form = RegistationForm(request.POST) 
         if form.is_valid():
-            user = form.save()
+            # save user and related profile (phone number)
+            user = form.save_user_and_profile(request=request)
             login(request, user)
             return redirect('postlist')
     else:
@@ -671,7 +930,10 @@ def register(request):
 def post_list(request):
     posts = Post.objects.all().order_by('-created_at')
     login_url = '/login/'
-    return render(request, 'core/postlist.html', {'posts': posts, 'login_url': login_url})
+    post_form = None
+    if request.user.is_authenticated:
+        post_form = PostForm()
+    return render(request, 'core/postlist.html', {'posts': posts, 'login_url': login_url, 'post_form': post_form})
 
 
 @login_required

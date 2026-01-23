@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Utwórz fanpage{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h3 class="mb-3">Utwórz fanpage</h3>
+          <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+              {{ form.name.label_tag }}
+              {{ form.name }}
+              {% for e in form.name.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="mb-3">
+              {{ form.description.label_tag }}
+              {{ form.description }}
+            </div>
+            <div class="d-grid">
+              <button class="btn btn-success" type="submit">Utwórz fanpage</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

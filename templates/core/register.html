@@ -38,6 +38,14 @@
                 </div>
 
                 <div class="mb-3">
+                  <label class="form-label">Numer telefonu (opcjonalnie)</label>
+                  {{ form.phone_number }}
+                  {% if form.phone_number.errors %}
+                    <div class="invalid-feedback d-block">{{ form.phone_number.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="mb-3">
                   <label class="form-label">Hasło</label>
                   {{ form.password1 }}
                   {% if form.password1.errors %}

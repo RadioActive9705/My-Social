@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Edytuj grupę: {{ group.name }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h3 class="mb-3">Edytuj grupę: {{ group.name }}</h3>
+          <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+              {{ form.name.label_tag }}
+              {{ form.name }}
+              {% for e in form.name.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="mb-3">
+              {{ form.description.label_tag }}
+              {{ form.description }}
+            </div>
+            <div class="mb-3">
+              {{ form.members.label_tag }}
+              <div class="d-flex align-items-center">
+                {{ form.members }}
+                <button id="add-friends-btn" type="button" class="btn btn-sm btn-outline-secondary ms-2">Dodaj znajomych</button>
+              </div>
+              <div class="form-text small">Zaznacz użytkowników którzy mają należeć do grupy.</div>
+            </div>
+            <div class="d-grid">
+              <button class="btn btn-primary" type="submit">Zapisz zmiany</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+<script>
+(function(){
+  const btn = document.getElementById('add-friends-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async function(){
+    try{
+      const res = await fetch('{% url "my_friends_json" %}', {credentials: 'same-origin'});
+      const j = await res.json();
+      if (!j.success) { alert('Błąd pobierania znajomych'); return; }
+      const friends = j.friends || [];
+      const sel = document.querySelector('select[name="members"]');
+      if (!sel) return;
+      for (const opt of sel.options) { opt.selected = false; }
+      const ids = new Set(friends.map(f => String(f.id)));
+      for (const opt of sel.options) { if (ids.has(opt.value)) opt.selected = true; }
+      sel.dispatchEvent(new Event('change'));
+    }catch(e){ console.error(e); alert('Błąd sieci'); }
+  });
+})();
+</script>
