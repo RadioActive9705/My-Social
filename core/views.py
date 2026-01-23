@@ -450,6 +450,14 @@ def group_detail(request, pk):
         messages_list.append({'id': m.id, 'sender': m.sender.username, 'content': m.content, 'created_at': m.created_at, 'image_url': getattr(m.image, 'url', None)})
 
     members = GroupMembership.objects.filter(group=grp).select_related('user')
+    # posts attached to this group
+    group_posts = Post.objects.filter(group=grp).select_related('author').order_by('-created_at')
+    post_form = None
+    if is_member:
+        try:
+            post_form = PostForm(user=request.user, initial={'group': grp})
+        except Exception:
+            post_form = None
 
     return render(request, 'core/group_detail.html', {
         'group': grp,
@@ -457,6 +465,8 @@ def group_detail(request, pk):
         'memberships': members,
         'is_owner': is_owner,
         'is_admin': is_admin,
+        'posts': group_posts,
+        'post_form': post_form,
     })
 
 
@@ -884,26 +894,29 @@ from django.contrib.auth.decorators import login_required
 @login_required(login_url='/login/')
 def add_post(request):
     if request.method == 'POST':
-        form = PostForm(request.POST, request.FILES)
+        form = PostForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             post = form.save(commit=False)
             post.author = request.user
             post.save()
+            next_url = request.POST.get('next') or request.GET.get('next')
+            if next_url and str(next_url).startswith('/'):
+                return redirect(next_url)
             return redirect('postlist')
     else:
-        form = PostForm()
+        form = PostForm(user=request.user)
     return render(request, 'core/add_post.html', {'form': form})
 
 def edit_post(request):
     post_id = request.GET.get('id')
     post = get_object_or_404(Post, id=post_id, author=request.user)
     if request.method == 'POST':
-        form = PostForm(request.POST, request.FILES, instance=post)
+        form = PostForm(request.POST, request.FILES, instance=post, user=request.user)
         if form.is_valid():
             form.save()
             return redirect('postlist')
     else:
-        form = PostForm(instance=post)
+        form = PostForm(instance=post, user=request.user)
     return render(request, 'core/edit_post.html', {'form': form, 'post': post})
 
 def delete_post(request):
@@ -932,7 +945,7 @@ def post_list(request):
     login_url = '/login/'
     post_form = None
     if request.user.is_authenticated:
-        post_form = PostForm()
+        post_form = PostForm(user=request.user)
     return render(request, 'core/postlist.html', {'posts': posts, 'login_url': login_url, 'post_form': post_form})
 
 

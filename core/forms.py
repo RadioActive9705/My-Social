@@ -95,13 +95,30 @@ class ProfileForm(forms.ModelForm):
         return user
 
 class PostForm(forms.ModelForm):
+    group = forms.ModelChoiceField(queryset=Group.objects.none(), required=False,
+                                   widget=forms.Select(attrs={'class': 'form-select'}),
+                                   help_text='Wybierz grupę (opcjonalnie)')
+
     class Meta:
         model = Post
-        fields = ['content', 'image']
+        fields = ['content', 'image', 'video', 'group']
         widgets = {
             'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Napisz coś...'}),
             'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'video': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'video/*'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user is not None and user.is_authenticated:
+            try:
+                qs = Group.objects.filter(Q(owner=user) | Q(members=user)).distinct()
+            except Exception:
+                qs = Group.objects.filter(owner=user)
+        else:
+            qs = Group.objects.none()
+        self.fields['group'].queryset = qs
 
 
 class UsernameOrEmailPasswordResetForm(DjangoPasswordResetForm):

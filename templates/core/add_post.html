@@ -13,14 +13,17 @@
                     <h2 class="mb-4 text-center text-primary">Dodaj post</h2>
                     <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
                         {% csrf_token %}
-                        {% for field in form %}
+                            {% for field in form %}
                             <div class="form-floating mb-3">
                                 {% if field.name == 'content' %}
                                     <textarea class="form-control" id="{{ field.id_for_label }}" name="{{ field.html_name }}" placeholder="Treść posta" style="height:120px;" required>{{ field.value|default_if_none:'' }}</textarea>
                                     <label for="{{ field.id_for_label }}">Treść posta</label>
                                 {% elif field.name == 'image' %}
-                                    <input type="file" class="form-control" id="{{ field.id_for_label }}" name="{{ field.html_name }}">
+                                    <input type="file" class="form-control" id="{{ field.id_for_label }}" name="{{ field.html_name }}" accept="image/*">
                                     <label for="{{ field.id_for_label }}">Obrazek (opcjonalnie)</label>
+                                {% elif field.name == 'video' %}
+                                    <input type="file" class="form-control" id="{{ field.id_for_label }}" name="{{ field.html_name }}" accept="video/*">
+                                    <label for="{{ field.id_for_label }}">Film (opcjonalnie)</label>
                                 {% else %}
                                     {{ field }}
                                 {% endif %}

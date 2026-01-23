@@ -12,15 +12,29 @@
       </div>
 
       <div class="card mb-3">
-        <div class="card-body" id="group-messages" style="max-height:60vh; overflow:auto;">
-          {% for m in messages %}
-            <div class="mb-2">
-              <strong>{{ m.sender }}</strong> <small class="text-muted">{{ m.created_at }}</small>
-              <div>{{ m.content }}</div>
-            </div>
-          {% empty %}
-            <div class="text-muted">Brak wiadomości.</div>
-          {% endfor %}
+        <div class="card-body">
+          <h5 class="mb-3">Posty w grupie</h5>
+          <div id="group-posts" style="max-height:50vh; overflow:auto;">
+            {% for p in posts %}
+              <div class="mb-3 border-bottom pb-2">
+                <div class="d-flex justify-content-between small text-muted">
+                  <div><strong>{{ p.author.username }}</strong></div>
+                  <div>{{ p.created_at|date:"Y-m-d H:i" }}</div>
+                </div>
+                <div class="mt-2">{{ p.content }}</div>
+                {% if p.image %}
+                  <div class="mt-2 text-center"><img src="{{ p.image.url }}" class="img-fluid rounded" style="max-height:240px;"></div>
+                {% endif %}
+                {% if p.video %}
+                  <div class="mt-2 text-center">
+                    <video controls class="rounded" style="max-width:100%; max-height:320px;"><source src="{{ p.video.url }}">Twoja przeglądarka nie obsługuje wideo.</video>
+                  </div>
+                {% endif %}
+              </div>
+            {% empty %}
+              <div class="text-muted">Brak postów.</div>
+            {% endfor %}
+          </div>
         </div>
         <div class="card-footer">
           <form id="group-send-form" method="post" action="{% url 'group_send_message' group.id %}" enctype="multipart/form-data">
@@ -32,6 +46,22 @@
           </form>
         </div>
       </div>
+      {% if post_form %}
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5>Dodaj post do grupy</h5>
+          <form method="post" action="{% url 'add_post' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-2">{{ post_form.content }}</div>
+            <div class="mb-2">{{ post_form.image }}</div>
+            <div class="mb-2">{{ post_form.video }}</div>
+            <input type="hidden" name="group" value="{{ group.id }}">
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button class="btn btn-success" type="submit">Dodaj post</button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
     </div>
     <div class="col-md-4">
       <div class="card shadow-sm mb-3">

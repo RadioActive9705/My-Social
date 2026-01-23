@@ -102,6 +102,8 @@ class Post(models.Model):
                                    related_name='posts')
     content    = models.TextField()
     image      = models.ImageField(upload_to='post_images/', null=True, blank=True)
+    video      = models.FileField(upload_to='post_videos/', null=True, blank=True)
+    group      = models.ForeignKey('Group', null=True, blank=True, on_delete=models.CASCADE, related_name='posts')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

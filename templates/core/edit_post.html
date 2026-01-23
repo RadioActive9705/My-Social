@@ -19,8 +19,11 @@
                                         <textarea class="form-control" id="{{ field.id_for_label }}" name="{{ field.html_name }}" placeholder="Treść posta" style="height:120px;" required>{{ field.value|default_if_none:'' }}</textarea>
                                         <label for="{{ field.id_for_label }}">Treść posta</label>
                                     {% elif field.name == 'image' %}
-                                        <input type="file" class="form-control" id="{{ field.id_for_label }}" name="{{ field.html_name }}">
+                                        <input type="file" class="form-control" id="{{ field.id_for_label }}" name="{{ field.html_name }}" accept="image/*">
                                         <label for="{{ field.id_for_label }}">Obrazek (opcjonalnie)</label>
+                                    {% elif field.name == 'video' %}
+                                        <input type="file" class="form-control" id="{{ field.id_for_label }}" name="{{ field.html_name }}" accept="video/*">
+                                        <label for="{{ field.id_for_label }}">Film (opcjonalnie)</label>
                                     {% else %}
                                         {{ field }}
                                     {% endif %}
@@ -31,6 +34,15 @@
                                 <div class="mb-3 text-center">
                                     <label class="form-label">Aktualny obrazek:</label><br>
                                     <img src="{{ post.image.url }}" alt="Post image" class="img-fluid rounded shadow-sm" style="max-width:320px;">
+                                </div>
+                            {% endif %}
+                            {% if post.video %}
+                                <div class="mb-3 text-center">
+                                    <label class="form-label">Aktualny film:</label><br>
+                                    <video controls class="rounded shadow-sm" style="max-width:100%; max-height:360px;">
+                                        <source src="{{ post.video.url }}">
+                                        Twoja przeglądarka nie obsługuje odtwarzania wideo.
+                                    </video>
                                 </div>
                             {% endif %}
                             <button type="submit" class="btn btn-primary w-100">Zapisz zmiany</button>
