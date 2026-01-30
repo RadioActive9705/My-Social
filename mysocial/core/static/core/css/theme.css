@@ -1,0 +1,56 @@
+/* Theme variables and simple dark-mode overrides */
+:root{
+    --bg: #f8f9fa;
+    --text: #212529;
+    --card-bg: #ffffff;
+    --muted: #6c757d;
+}
+
+body{
+    background-color: var(--bg);
+    color: var(--text);
+}
+
+.card, .list-group-item, .dropdown-menu {
+    background-color: var(--card-bg);
+    color: var(--text);
+}
+
+.navbar .nav-link, .navbar .navbar-brand, .navbar .dropdown-item {
+    color: #ffffff !important;
+}
+
+/* Dark theme */
+.theme-dark {
+    --bg: #121212;
+    --text: #e9ecef;
+    --card-bg: #1e1e1e;
+    --muted: #adb5bd;
+}
+
+.theme-dark body{
+    background-color: var(--bg);
+    color: var(--text);
+}
+
+.theme-dark .card, .theme-dark .list-group-item, .theme-dark .dropdown-menu {
+    background-color: var(--card-bg);
+    color: var(--text);
+}
+
+/* Small adjustments for inputs and buttons in dark mode */
+.theme-dark input, .theme-dark textarea, .theme-dark select {
+    background-color: #2a2a2a;
+    color: var(--text);
+    border-color: #3a3a3a;
+}
+
+.theme-toggle-btn {
+    border: none;
+    background: transparent;
+    color: #fff;
+}
+
+.theme-toggle-icon {
+    font-size: 1.15rem;
+}

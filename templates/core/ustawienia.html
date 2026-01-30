@@ -154,6 +154,34 @@
           </div>
         </div>
       </div>
+      <div class="col-12 col-md-4">
+        <div class="card h-100 border-0 shadow-sm mb-4">
+          <div class="card-body d-flex flex-column">
+            <div>
+              <h5 class="mb-3 text-primary"><i class="bi bi-type"></i> Wygląd — czcionka</h5>
+              <p class="small text-muted">Wybierz preferowaną czcionkę dla interfejsu.</p>
+              <div class="mb-3">
+                <label for="fontSelect" class="form-label">Czcionka</label>
+                <select id="fontSelect" class="form-select">
+                  <option value="system">System (domyślna)</option>
+                  <option value="roboto">Roboto</option>
+                  <option value="opensans">Open Sans</option>
+                  <option value="merriweather">Merriweather (szeryfowa)</option>
+                  <option value="mono">Monospace</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Podgląd</label>
+                <div id="fontPreview" class="border p-3 rounded" style="min-height:56px;">Przykładowy tekst: Szybki brązowy lis przeskoczył nad leniwym psem.</div>
+              </div>
+            </div>
+            <div class="mt-auto d-flex gap-2">
+              <button id="saveFontBtn" class="btn btn-primary">Zapisz</button>
+              <button id="resetFontBtn" class="btn btn-outline-secondary">Przywróć domyślną</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -187,6 +215,49 @@
       }
     }
   } catch (err) { console.error('ustawienia small script error', err); }
+})();
+</script>
+<script>
+// Font selector behavior: initialize from localStorage and call applySiteFont if available
+(function(){
+  try{
+    const select = document.getElementById('fontSelect');
+    const preview = document.getElementById('fontPreview');
+    const saveBtn = document.getElementById('saveFontBtn');
+    const resetBtn = document.getElementById('resetFontBtn');
+    const storageKey = 'siteFont';
+    function setPreviewFont(name){
+      // mirror the applySiteFont logic by setting style/font-family for preview
+      const mapping = {
+        'system': '',
+        'roboto': 'Roboto, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
+        'opensans': '"Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial',
+        'merriweather': 'Merriweather, Georgia, Cambria, "Times New Roman", Times, serif',
+        'mono': 'ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace'
+      };
+      if(preview) preview.style.fontFamily = mapping[name] || '';
+    }
+
+    // init select from storage
+    const saved = (function(){ try{ return localStorage.getItem(storageKey); }catch(e){return null;} })() || 'system';
+    if(select) { select.value = saved; setPreviewFont(saved); }
+
+    // live preview on change
+    if(select){ select.addEventListener('change', function(){ setPreviewFont(this.value); }); }
+
+    if(saveBtn){ saveBtn.addEventListener('click', function(){
+      const val = select ? select.value : 'system';
+      try{ if(window.applySiteFont) window.applySiteFont(val); else localStorage.setItem(storageKey, val); }catch(e){}
+      // visual feedback
+      saveBtn.classList.add('disabled'); setTimeout(()=>saveBtn.classList.remove('disabled'),700);
+    }); }
+
+    if(resetBtn){ resetBtn.addEventListener('click', function(){
+      if(select) { select.value = 'system'; setPreviewFont('system'); }
+      try{ if(window.applySiteFont) window.applySiteFont('system'); else localStorage.removeItem(storageKey);}catch(e){}
+    }); }
+
+  }catch(err){ console.error('font selector error', err); }
 })();
 </script>
 {% endblock %}

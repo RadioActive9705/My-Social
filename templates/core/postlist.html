@@ -1,91 +1,89 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="utf-8">
-    <title>Lista postów</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/css/style.css' %}"/>
-</head>
-<body class="bg-light">
-    <div class="container-fluid py-4 px-2 px-md-4">
-        <div class="row justify-content-center">
-            <div class="col-12 col-sm-10 col-md-9 col-lg-8 col-xl-7">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body">
-                                                <h1 class="card-title text-center mb-4">Lista postów</h1>
-                                                <div class="text-center mb-3">
-                                                    {% if not user.is_authenticated %}
-                                                        <a href="{% url 'login' %}?next={% url 'add_post' %}" class="btn btn-primary me-2">Zaloguj</a>
-                                                        <a href="{% url 'register' %}" class="btn btn-success">Zarejestruj</a>
-                                                    {% else %}
-                                                        <a href="{% url 'add_post' %}" class="btn btn-success">Dodaj nowy post</a>
-                                                    {% endif %}
-                                                </div>
-                                                    {% if user.is_authenticated and post_form %}
-                                                    <div class="mb-3">
-                                                        <form method="post" action="{% url 'add_post' %}" enctype="multipart/form-data" class="row g-2 align-items-end">
-                                                            {% csrf_token %}
-                                                            <div class="col-12 col-md-5">
-                                                                {{ post_form.content }}
-                                                            </div>
-                                                            <div class="col-6 col-md-3">
-                                                                {{ post_form.image }}
-                                                            </div>
-                                                            <div class="col-6 col-md-2">
-                                                                {{ post_form.video }}
-                                                            </div>
-                                                            <div class="col-12 col-md-2">
-                                                                {{ post_form.group }}
-                                                            </div>
-                                                            <div class="col-12 col-md-1">
-                                                                <button class="btn btn-success w-100" type="submit">Dodaj</button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
-                                                {% endif %}
-                                                <ul class="list-group">
-                                                    {% for post in posts %}
-                                                        <li class="list-group-item">
-                                                            <div class="d-flex justify-content-between align-items-center">
-                                                                <div>
-                                                                    <strong>{{ post.author.username }}</strong>
-                                                                    {% if post.group %}
-                                                                        <span class="text-muted">&nbsp;w&nbsp;<a href="{% url 'group_detail' post.group.id %}">{{ post.group.name }}</a></span>
-                                                                    {% endif %}
-                                                                    <span class="text-muted">&bull; {{ post.created_at|date:"Y-m-d H:i" }}</span>
-                                                                </div>
-                                                                {% if user.is_authenticated and user == post.author %}
-                                                                    <form method="post" action="{% url 'delete_post' %}?id={{ post.id }}" style="display:inline;">
-                                                                        {% csrf_token %}
-                                                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Czy na pewno chcesz usunąć ten post?');">Usuń</button>
-                                                                    </form>
-                                                                {% endif %}
-                                                            </div>
-                                                            <p class="mt-2 mb-1">{{ post.content }}</p>
-                                                            {% if post.image %}
-                                                                <div class="text-center my-2">
-                                                                    <img src="{{ post.image.url }}" alt="Post image" class="img-fluid rounded border shadow-sm w-100" style="max-width:350px; max-height:40vw; object-fit:contain;">
-                                                                </div>
-                                                            {% endif %}
-                                                            {% if post.video %}
-                                                                <div class="text-center my-2">
-                                                                    <video controls class="rounded border shadow-sm w-100" style="max-width:350px; max-height:50vh;">
-                                                                        <source src="{{ post.video.url }}">
-                                                                        Twoja przeglądarka nie obsługuje odtwarzania wideo.
-                                                                    </video>
-                                                                </div>
-                                                            {% endif %}
-                                                        </li>
-                                                    {% empty %}
-                                                        <li class="list-group-item text-center">Brak postów.</li>
-                                                    {% endfor %}
-                                                    
-                                                </ul>
+
+{% block title %}Lista postów{% endblock title %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/css/style.css' %}"/>
+{% endblock extra_head %}
+
+{% block content %}
+<div class="container-fluid py-4 px-2 px-md-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-sm-10 col-md-9 col-lg-8 col-xl-7">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h1 class="card-title text-center mb-4">Lista postów</h1>
+                    <div class="text-center mb-3">
+                        {% if not user.is_authenticated %}
+                            <a href="{% url 'login' %}?next={% url 'add_post' %}" class="btn btn-primary me-2">Zaloguj</a>
+                            <a href="{% url 'register' %}" class="btn btn-success">Zarejestruj</a>
+                        {% else %}
+                            <a href="{% url 'add_post' %}" class="btn btn-success">Dodaj nowy post</a>
+                        {% endif %}
                     </div>
+                    {% if user.is_authenticated and post_form %}
+                        <div class="mb-3">
+                            <form method="post" action="{% url 'add_post' %}" enctype="multipart/form-data" class="row g-2 align-items-end">
+                                {% csrf_token %}
+                                <div class="col-12 col-md-5">
+                                    {{ post_form.content }}
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    {{ post_form.image }}
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    {{ post_form.video }}
+                                </div>
+                                <div class="col-12 col-md-2">
+                                    {{ post_form.group }}
+                                </div>
+                                <div class="col-12 col-md-1">
+                                    <button class="btn btn-success w-100" type="submit">Dodaj</button>
+                                </div>
+                            </form>
+                        </div>
+                    {% endif %}
+                    <ul class="list-group">
+                        {% for post in posts %}
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ post.author.username }}</strong>
+                                        {% if post.group %}
+                                            <span class="text-muted">&nbsp;w&nbsp;<a href="{% url 'group_detail' post.group.id %}">{{ post.group.name }}</a></span>
+                                        {% endif %}
+                                        <span class="text-muted">&bull; {{ post.created_at|date:"Y-m-d H:i" }}</span>
+                                    </div>
+                                    {% if user.is_authenticated and user == post.author %}
+                                        <form method="post" action="{% url 'delete_post' %}?id={{ post.id }}" style="display:inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Czy na pewno chcesz usunąć ten post?');">Usuń</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                                <p class="mt-2 mb-1">{{ post.content }}</p>
+                                {% if post.image %}
+                                    <div class="text-center my-2">
+                                        <img src="{{ post.image.url }}" alt="Post image" class="img-fluid rounded border shadow-sm w-100" style="max-width:350px; max-height:40vw; object-fit:contain;">
+                                    </div>
+                                {% endif %}
+                                {% if post.video %}
+                                    <div class="text-center my-2">
+                                        <video controls class="rounded border shadow-sm w-100" style="max-width:350px; max-height:50vh;">
+                                            <source src="{{ post.video.url }}">
+                                            Twoja przeglądarka nie obsługuje odtwarzania wideo.
+                                        </video>
+                                    </div>
+                                {% endif %}
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item text-center">Brak postów.</li>
+                        {% endfor %}
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
-</body>
-</html>
+</div>
+{% endblock content %}
